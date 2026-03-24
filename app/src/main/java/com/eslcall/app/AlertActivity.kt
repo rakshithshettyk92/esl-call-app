@@ -45,6 +45,7 @@ class AlertActivity : AppCompatActivity() {
     private var countDownTimer:         CountDownTimer? = null
     private var currentLabelCode:       String = ""
     private var currentNotifId:         Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
+    private var currentReceivedAt:      Long   = 0L
     private var isTransitioningToList:  Boolean = false
 
     // When 2nd alert arrives, transition to the active calls list screen
@@ -150,8 +151,9 @@ class AlertActivity : AppCompatActivity() {
             return
         }
 
-        currentLabelCode = alert.labelCode
-        currentNotifId   = alert.notificationId
+        currentLabelCode  = alert.labelCode
+        currentNotifId    = alert.notificationId
+        currentReceivedAt = alert.receivedAt
 
         findViewById<TextView>(R.id.tvAlertMessage).text = alert.message
 
@@ -170,9 +172,7 @@ class AlertActivity : AppCompatActivity() {
         updatePendingBadge()
         // Timer counts down the time remaining since the FCM message was received,
         // not since this screen opened.
-        val elapsed   = System.currentTimeMillis() - alert.receivedAt
-        val remaining = AUTO_DISMISS_MS - elapsed
-        restartCountdown(remaining)
+        restartCountdown()
     }
 
     private fun dismissCurrent(status: AlertStatus) {
@@ -215,8 +215,9 @@ class AlertActivity : AppCompatActivity() {
     // Countdown timer
     // -------------------------------------------------------------------------
 
-    private fun restartCountdown(remainingMs: Long) {
+    private fun restartCountdown() {
         countDownTimer?.cancel()
+        val remainingMs = AUTO_DISMISS_MS - (System.currentTimeMillis() - currentReceivedAt)
         if (remainingMs <= 0) {
             // Time already expired while the screen wasn't open — mark missed immediately
             dismissCurrent(AlertStatus.MISSED)
