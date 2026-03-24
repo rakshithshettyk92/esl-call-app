@@ -30,20 +30,22 @@ import java.net.URL
 class AlertActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_MESSAGE      = "extra_message"
-        const val EXTRA_COMPANY_CODE = "extra_company_code"
-        const val EXTRA_LABEL_CODE   = "extra_label_code"
+        const val EXTRA_MESSAGE         = "extra_message"
+        const val EXTRA_COMPANY_CODE    = "extra_company_code"
+        const val EXTRA_LABEL_CODE      = "extra_label_code"
+        const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
         private const val AUTO_DISMISS_MS = 60_000L
     }
 
-    private var countDownTimer: CountDownTimer? = null
-    private var currentLabelCode: String = ""
+    private var countDownTimer:      CountDownTimer? = null
+    private var currentLabelCode:    String = ""
+    private var currentNotificationId: Int  = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
 
-    // Receives the cancel broadcast from MyFirebaseMessagingService
+    // Receives the cancel broadcast — only acts if it matches our label
     private val cancelReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val cancelLabel = intent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE) ?: ""
-            if (cancelLabel.isEmpty() || cancelLabel == currentLabelCode) {
+            if (cancelLabel == currentLabelCode) {
                 countDownTimer?.cancel()
                 showAlreadyAcknowledged()
             }
@@ -99,10 +101,18 @@ class AlertActivity : AppCompatActivity() {
     }
 
     private fun applyIntent(intent: android.content.Intent) {
-        val message     = intent.getStringExtra(EXTRA_MESSAGE)      ?: "Employee Call"
-        val companyCode = intent.getStringExtra(EXTRA_COMPANY_CODE) ?: ""
-        val labelCode   = intent.getStringExtra(EXTRA_LABEL_CODE)   ?: ""
-        currentLabelCode = labelCode
+        val message     = intent.getStringExtra(EXTRA_MESSAGE)         ?: "Employee Call"
+        val companyCode = intent.getStringExtra(EXTRA_COMPANY_CODE)    ?: ""
+        val labelCode   = intent.getStringExtra(EXTRA_LABEL_CODE)      ?: ""
+        currentLabelCode     = labelCode
+        currentNotificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID,
+            MyFirebaseMessagingService.ALERT_NOTIFICATION_ID)
+
+        // If already acknowledged (e.g. user tapped banner "On My Way" before opening)
+        if (AcknowledgedStore.isAcknowledged(this, labelCode)) {
+            showAlreadyAcknowledged()
+            return
+        }
 
         findViewById<TextView>(R.id.tvAlertMessage).text = message
 
@@ -146,9 +156,9 @@ class AlertActivity : AppCompatActivity() {
         btnDismiss.isEnabled = false
         countDownTimer?.cancel()
 
-        // Dismiss the tray notification
+        // Dismiss the tray notification for this specific label
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-            .cancel(MyFirebaseMessagingService.ALERT_NOTIFICATION_ID)
+            .cancel(currentNotificationId)
 
         Thread {
             try {
@@ -177,6 +187,7 @@ class AlertActivity : AppCompatActivity() {
                 runOnUiThread {
                     when (responseCode) {
                         200 -> {
+                            AcknowledgedStore.markAcknowledged(this, labelCode)
                             AlertHistoryStore.save(
                                 this,
                                 AlertHistoryItem(

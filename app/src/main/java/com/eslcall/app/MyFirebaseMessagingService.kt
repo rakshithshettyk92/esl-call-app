@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
-import android.content.IntentFilter
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -14,7 +13,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         const val ALERT_CHANNEL_ID        = "esl_alert_channel"
-        const val ALERT_NOTIFICATION_ID   = 1002
+        const val ALERT_NOTIFICATION_ID   = 1002   // fallback only
         const val TAG                     = "FCMService"
         const val ACTION_CANCEL_ALERT     = "com.eslcall.app.CANCEL_ALERT"
         const val EXTRA_CANCEL_LABEL_CODE = "cancel_label_code"
@@ -25,16 +24,22 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val data = remoteMessage.data
 
-        // Cancel message — dismiss any open alert for this labelCode
+        // Cancel message — dismiss the alert for this specific labelCode
         if (data["type"] == "cancel") {
             val labelCode = data["labelCode"] ?: ""
             Log.d(TAG, "FCM cancel received for labelCode: $labelCode")
+
+            // Mark acknowledged locally so AlertActivity shows correct state on open
+            AcknowledgedStore.markAcknowledged(this, labelCode)
+
+            // Dismiss the tray notification for this label
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                .cancel(notificationIdFor(labelCode))
+
+            // Broadcast so any open AlertActivity for this label dismisses itself
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
                 putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
             })
-            // Also cancel the tray notification
-            (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager)
-                .cancel(ALERT_NOTIFICATION_ID)
             return
         }
 
@@ -48,18 +53,21 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun triggerAlert(message: String, companyCode: String, labelCode: String) {
         ensureAlertChannel()
 
+        val notifId = notificationIdFor(labelCode)
+
         // Full-screen intent — launches AlertActivity
         val alertIntent = Intent(this, AlertActivity::class.java).apply {
-            putExtra(AlertActivity.EXTRA_MESSAGE,      message)
-            putExtra(AlertActivity.EXTRA_COMPANY_CODE, companyCode)
-            putExtra(AlertActivity.EXTRA_LABEL_CODE,   labelCode)
+            putExtra(AlertActivity.EXTRA_MESSAGE,         message)
+            putExtra(AlertActivity.EXTRA_COMPANY_CODE,    companyCode)
+            putExtra(AlertActivity.EXTRA_LABEL_CODE,      labelCode)
+            putExtra(AlertActivity.EXTRA_NOTIFICATION_ID, notifId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
-            this, System.currentTimeMillis().toInt(), alertIntent,
+            this, notifId, alertIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -70,7 +78,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
         }
         val onMyWayPendingIntent = PendingIntent.getBroadcast(
-            this, System.currentTimeMillis().toInt(), onMyWayIntent,
+            this, notifId, onMyWayIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -78,19 +86,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Employee Call")
             .setContentText(message)
-            // Expanded notification shows full message
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setContentIntent(fullScreenPendingIntent)  // tap banner → open AlertActivity
-            // "On My Way" action button in both collapsed and expanded notification
+            .setContentIntent(fullScreenPendingIntent)
             .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPendingIntent)
             .setAutoCancel(true)
             .build()
 
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(ALERT_NOTIFICATION_ID, notification)
+        nm.notify(notifId, notification)
 
         // Also launch AlertActivity directly when screen is on
         startActivity(alertIntent)
