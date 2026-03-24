@@ -32,6 +32,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             Log.d(TAG, "FCM cancel for: $labelCode")
             AcknowledgedStore.markAcknowledged(this, labelCode)
             AlertQueueStore.removeByLabelCode(this, labelCode)
+            // Remove any MISSED entry that was saved before this cancel arrived
+            AlertHistoryStore.removeByLabelCode(this, labelCode)
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(notificationIdFor(labelCode))
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
@@ -104,6 +106,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 .setFullScreenIntent(fullScreenPI, true)
                 .setContentIntent(fullScreenPI)
                 .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
+                .setNumber(1)
                 .setAutoCancel(true)
                 .build()
             nm.notify(notifId, notification)
@@ -134,6 +137,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(activeCallsPI)
+                .setNumber(queueSize)
                 .setAutoCancel(false)
                 .setOngoing(true)
                 .build()

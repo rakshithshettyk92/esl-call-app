@@ -248,6 +248,15 @@
                                 android:textSize="12sp"
                                 android:textColor="@color/text_secondary" />
 
+                            <TextView
+                                android:id="@+id/tvActiveCountStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="No active calls"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary" />
+
                         </LinearLayout>
 
                     </LinearLayout>
@@ -376,13 +385,34 @@
                 </LinearLayout>
 
                 <!-- Action buttons -->
-                <Button
-                    android:id="@+id/btnHistory"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:layout_marginBottom="10dp"
-                    android:text="Alert History"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
+                    android:layout_marginBottom="10dp">
+
+                    <Button
+                        android:id="@+id/btnHistory"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:text="Alert History"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <!-- Active count badge — hidden when 0 -->
+                    <TextView
+                        android:id="@+id/tvHistoryBadge"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="end|top"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginEnd="5dp"
+                        android:gravity="center"
+                        android:textSize="11sp"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:background="@drawable/shape_badge_red"
+                        android:visibility="gone" />
+
+                </FrameLayout>
 
                 <Button
                     android:id="@+id/btnTestAlert"

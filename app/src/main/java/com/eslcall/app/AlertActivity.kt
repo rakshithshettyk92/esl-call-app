@@ -348,21 +348,8 @@ class AlertActivity : AppCompatActivity() {
         countDownTimer?.cancel()
         try { unregisterReceiver(cancelReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(switchToListReceiver) } catch (_: Exception) {}
-
-        if (!isTransitioningToList) {
-            // Activity closed without transitioning — save remaining as MISSED and clear queue
-            AlertQueueStore.loadAll(this).forEach { alert ->
-                AlertHistoryStore.save(
-                    this, AlertHistoryItem(
-                        message     = alert.message,
-                        companyCode = alert.companyCode,
-                        labelCode   = alert.labelCode,
-                        timestamp   = System.currentTimeMillis(),
-                        status      = AlertStatus.MISSED
-                    )
-                )
-            }
-            AlertQueueStore.clear(this)
-        }
+        // Queue items are intentionally left intact so the Active Calls card on the
+        // home screen can pick them up. MISSED is only recorded by the 60-second
+        // CountDownTimer.onFinish(), never by a lifecycle event.
     }
 }

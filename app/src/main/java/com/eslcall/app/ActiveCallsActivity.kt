@@ -131,6 +131,7 @@ class ActiveCallsActivity : AppCompatActivity() {
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
             .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(pi)
+            .setNumber(count)
             .setAutoCancel(false)
             .setOngoing(true)
             .build()

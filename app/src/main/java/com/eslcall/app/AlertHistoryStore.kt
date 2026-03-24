@@ -33,6 +33,19 @@ object AlertHistoryStore {
         prefs.edit().putString(KEY_HISTORY, newArray.toString()).apply()
     }
 
+    /** Remove all history entries matching labelCode (e.g. after FCM cancel from another device). */
+    fun removeByLabelCode(context: Context, labelCode: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json  = prefs.getString(KEY_HISTORY, "[]") ?: "[]"
+        val array = try { JSONArray(json) } catch (_: Exception) { return }
+        val kept  = JSONArray()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            if (obj.optString("labelCode") != labelCode) kept.put(obj)
+        }
+        prefs.edit().putString(KEY_HISTORY, kept.toString()).apply()
+    }
+
     fun load(context: Context): List<AlertHistoryItem> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json  = prefs.getString(KEY_HISTORY, "[]")

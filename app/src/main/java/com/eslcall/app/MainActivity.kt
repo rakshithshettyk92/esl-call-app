@@ -64,6 +64,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnLogout:             Button
     private lateinit var layoutActiveCalls:     LinearLayout
     private lateinit var tvActiveCallsCount:    TextView
+    private lateinit var tvActiveCountStatus:   TextView
+    private lateinit var tvHistoryBadge:        TextView
     private lateinit var viewActiveCallsPulse:  View
     private lateinit var btnRespondNow:         Button
 
@@ -235,12 +237,14 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun showLoginState() {
-        layoutLogin.visibility = View.VISIBLE
-        layoutReady.visibility = View.GONE
+        layoutLogin.visibility  = View.VISIBLE
+        layoutReady.visibility  = View.GONE
         etUsername.text.clear()
         etPassword.text.clear()
         tvLoginError.visibility = View.GONE
+        tvHistoryBadge.visibility = View.GONE
         stopPulse()
+        stopActiveCallsPulse()
     }
 
     private fun showReadyState(username: String) {
@@ -280,8 +284,32 @@ class MainActivity : AppCompatActivity() {
         val count = AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
             .size
+
+        // Inline status count (always visible in the status card)
+        if (::tvActiveCountStatus.isInitialized) {
+            if (count > 0) {
+                tvActiveCountStatus.text      = "● $count active call${if (count > 1) "s" else ""}"
+                tvActiveCountStatus.setTextColor(0xFFC62828.toInt())
+            } else {
+                tvActiveCountStatus.text      = "No active calls"
+                tvActiveCountStatus.setTextColor(
+                    resources.getColor(R.color.text_secondary, theme))
+            }
+        }
+
+        // Badge on the History button
+        if (::tvHistoryBadge.isInitialized) {
+            if (count > 0) {
+                tvHistoryBadge.text       = if (count > 9) "9+" else count.toString()
+                tvHistoryBadge.visibility = View.VISIBLE
+            } else {
+                tvHistoryBadge.visibility = View.GONE
+            }
+        }
+
+        // Active calls card + red pulse
         if (count > 0) {
-            tvActiveCallsCount.text = "$count Active Call${if (count > 1) "s" else ""}"
+            tvActiveCallsCount.text      = "$count Active Call${if (count > 1) "s" else ""}"
             layoutActiveCalls.visibility = View.VISIBLE
             startActiveCallsPulse()
         } else {
@@ -371,10 +399,12 @@ class MainActivity : AppCompatActivity() {
         btnHistory            = findViewById(R.id.btnHistory)
         btnTestAlert          = findViewById(R.id.btnTestAlert)
         btnLogout             = findViewById(R.id.btnLogout)
-        layoutActiveCalls     = findViewById(R.id.layoutActiveCalls)
-        tvActiveCallsCount    = findViewById(R.id.tvActiveCallsCount)
-        viewActiveCallsPulse  = findViewById(R.id.viewActiveCallsPulse)
-        btnRespondNow         = findViewById(R.id.btnRespondNow)
+        layoutActiveCalls    = findViewById(R.id.layoutActiveCalls)
+        tvActiveCallsCount   = findViewById(R.id.tvActiveCallsCount)
+        tvActiveCountStatus  = findViewById(R.id.tvActiveCountStatus)
+        tvHistoryBadge       = findViewById(R.id.tvHistoryBadge)
+        viewActiveCallsPulse = findViewById(R.id.viewActiveCallsPulse)
+        btnRespondNow        = findViewById(R.id.btnRespondNow)
     }
 
     private fun postToRelay(path: String, body: String): JSONObject {
