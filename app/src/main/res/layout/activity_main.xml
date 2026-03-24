@@ -165,13 +165,31 @@
                     android:textSize="13sp"
                     android:visibility="gone" />
 
-                <Button
-                    android:id="@+id/btnLogin"
+                <!-- Login button with spinner overlay -->
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:text="Sign In"
-                    android:textSize="15sp"
-                    android:backgroundTint="@color/primary" />
+                    android:layout_height="52dp">
+
+                    <Button
+                        android:id="@+id/btnLogin"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:text="Sign In"
+                        android:textSize="15sp"
+                        android:backgroundTint="@color/primary" />
+
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/progressLogin"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center"
+                        android:indeterminate="true"
+                        android:visibility="gone"
+                        app:indicatorColor="@color/white"
+                        app:trackThickness="3dp"
+                        app:indicatorSize="28dp" />
+
+                </FrameLayout>
 
             </LinearLayout>
 
@@ -226,36 +244,60 @@
 
                         </FrameLayout>
 
+                        <!-- Right side: avatar circle + status text -->
                         <LinearLayout
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
+                            android:layout_weight="1"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
+                            <!-- User avatar: first letter of username in a circle -->
                             <TextView
-                                android:id="@+id/tvStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Ready — Listening for calls"
-                                android:textSize="16sp"
+                                android:id="@+id/tvUserAvatar"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/shape_avatar_circle"
+                                android:gravity="center"
+                                android:textSize="18sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/green" />
+                                android:textColor="@color/white"
+                                android:layout_marginEnd="12dp"
+                                android:text="?" />
 
-                            <TextView
-                                android:id="@+id/tvReadyUser"
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:text=""
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                android:layout_weight="1"
+                                android:orientation="vertical">
 
-                            <TextView
-                                android:id="@+id/tvActiveCountStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="No active calls"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                <TextView
+                                    android:id="@+id/tvStatus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Ready — Listening for calls"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/green" />
+
+                                <TextView
+                                    android:id="@+id/tvReadyUser"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text=""
+                                    android:textSize="12sp"
+                                    android:textColor="@color/text_secondary" />
+
+                                <TextView
+                                    android:id="@+id/tvActiveCountStatus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="No active calls"
+                                    android:textSize="12sp"
+                                    android:textColor="@color/text_secondary" />
+
+                            </LinearLayout>
 
                         </LinearLayout>
 

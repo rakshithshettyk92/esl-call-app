@@ -1,5 +1,7 @@
 package com.eslcall.app
 
+import android.os.Build
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +52,12 @@ class ActiveCallsAdapter(
 
         holder.btnOnMyWay.setOnClickListener {
             if (!loading) {
+                it.performHapticFeedback(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                        HapticFeedbackConstants.CONFIRM
+                    else
+                        HapticFeedbackConstants.VIRTUAL_KEY
+                )
                 inProgress.add(alert.labelCode)
                 notifyItemChanged(position)
                 onAcknowledge(alert)

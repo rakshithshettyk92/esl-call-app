@@ -5,10 +5,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -160,6 +162,12 @@ class AlertActivity : AppCompatActivity() {
         btnDismiss.isEnabled = true
 
         btnOnMyWay.setOnClickListener {
+            it.performHapticFeedback(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                    HapticFeedbackConstants.CONFIRM
+                else
+                    HapticFeedbackConstants.VIRTUAL_KEY
+            )
             if (alert.companyCode.isNotBlank() && alert.labelCode.isNotBlank()) {
                 triggerAcknowledge(alert.companyCode, alert.labelCode, alert.message)
             } else {

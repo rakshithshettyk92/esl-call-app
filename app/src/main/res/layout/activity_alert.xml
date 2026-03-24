@@ -97,15 +97,16 @@
             android:textColor="@color/alert_title"
             android:gravity="center" />
 
-        <!-- Detail message from webhook -->
+        <!-- Detail message from webhook — prominent shelf/location info -->
         <TextView
             android:id="@+id/tvAlertMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text=""
-            android:textSize="18sp"
-            android:textColor="@color/alert_message"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
             android:gravity="center"
             android:lineSpacingMultiplier="1.3" />
 

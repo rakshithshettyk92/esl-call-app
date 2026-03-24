@@ -23,6 +23,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -52,9 +54,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etUsername:        EditText
     private lateinit var etPassword:        EditText
     private lateinit var btnLogin:          Button
+    private lateinit var progressLogin:     CircularProgressIndicator
     private lateinit var btnTogglePassword: ImageButton
     private lateinit var tvLoginError:      TextView
     private lateinit var tvReadyUser:       TextView
+    private lateinit var tvUserAvatar:      TextView
     private lateinit var tvStatus:          TextView
     private lateinit var tvLastAlertMessage:TextView
     private lateinit var tvLastAlertTime:   TextView
@@ -76,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -151,7 +156,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnLogin.isEnabled = false
-        btnLogin.text = "Signing in..."
+        btnLogin.text      = ""
+        progressLogin.visibility = View.VISIBLE
 
         Thread {
             try {
@@ -164,8 +170,9 @@ class MainActivity : AppCompatActivity() {
                 val success = result.optString("status") == "ok"
 
                 runOnUiThread {
-                    btnLogin.isEnabled = true
-                    btnLogin.text      = "Sign In"
+                    btnLogin.isEnabled       = true
+                    btnLogin.text            = "Sign In"
+                    progressLogin.visibility = View.GONE
                     if (success) {
                         tvLoginError.visibility = View.GONE
                         saveUsername(username)
@@ -176,8 +183,9 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    btnLogin.isEnabled = true
-                    btnLogin.text      = "Sign In"
+                    btnLogin.isEnabled       = true
+                    btnLogin.text            = "Sign In"
+                    progressLogin.visibility = View.GONE
                     showLoginError("Could not connect to server")
                 }
             }
@@ -250,7 +258,8 @@ class MainActivity : AppCompatActivity() {
     private fun showReadyState(username: String) {
         layoutLogin.visibility = View.GONE
         layoutReady.visibility = View.VISIBLE
-        tvReadyUser.text       = "Signed in as $username"
+        tvReadyUser.text       = username
+        tvUserAvatar.text      = username.first().uppercaseChar().toString()
         tvStatus.text          = "Ready — Listening for calls"
         startPulse()
         refreshLastAlert()
@@ -382,9 +391,11 @@ class MainActivity : AppCompatActivity() {
         etUsername         = findViewById(R.id.etUsername)
         etPassword         = findViewById(R.id.etPassword)
         btnLogin           = findViewById(R.id.btnLogin)
+        progressLogin      = findViewById(R.id.progressLogin)
         btnTogglePassword  = findViewById(R.id.btnTogglePassword)
         tvLoginError       = findViewById(R.id.tvLoginError)
         tvReadyUser        = findViewById(R.id.tvReadyUser)
+        tvUserAvatar       = findViewById(R.id.tvUserAvatar)
         tvStatus           = findViewById(R.id.tvStatus)
         tvLastAlertMessage = findViewById(R.id.tvLastAlertMessage)
         tvLastAlertTime    = findViewById(R.id.tvLastAlertTime)

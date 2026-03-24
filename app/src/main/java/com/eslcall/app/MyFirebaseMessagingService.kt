@@ -13,7 +13,7 @@ import java.util.UUID
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val ALERT_CHANNEL_ID        = "esl_alert_channel"
+        const val ALERT_CHANNEL_ID        = "esl_alert_channel_v2"  // bumped to pick up new sound/vibration
         const val ALERT_NOTIFICATION_ID   = 1002   // fallback only
         const val GROUPED_NOTIFICATION_ID = 998    // used when 2+ alerts active
         const val TAG                     = "FCMService"
@@ -159,9 +159,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun ensureAlertChannel() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(ALERT_CHANNEL_ID) != null) return
+        // Use ringtone-class sound + a punchy long-short-long vibration pattern
+        val ringtoneUri = android.media.RingtoneManager.getDefaultUri(
+            android.media.RingtoneManager.TYPE_RINGTONE)
+        val audioAttr = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
         NotificationChannel(ALERT_CHANNEL_ID, "Employee Call Alerts",
             NotificationManager.IMPORTANCE_HIGH).apply {
+            setSound(ringtoneUri, audioAttr)
             enableVibration(true)
+            vibrationPattern = longArrayOf(0, 400, 150, 400, 150, 800)
             enableLights(true)
             setBypassDnd(true)
         }.also { nm.createNotificationChannel(it) }
