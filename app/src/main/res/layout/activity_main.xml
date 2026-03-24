@@ -20,13 +20,13 @@
         android:paddingBottom="22dp"
         android:gravity="center_vertical">
 
-        <!-- Solum swirl logo -->
+        <!-- Bell icon — matches the installed app icon -->
         <ImageView
             android:layout_width="52dp"
             android:layout_height="52dp"
             android:layout_marginEnd="16dp"
-            android:src="@drawable/ic_solum_logo"
-            android:contentDescription="SOLUM logo" />
+            android:src="@drawable/ic_launcher_foreground"
+            android:contentDescription="Employee Call" />
 
         <!-- Brand text column -->
         <LinearLayout
@@ -385,34 +385,13 @@
                 </LinearLayout>
 
                 <!-- Action buttons -->
-                <FrameLayout
+                <Button
+                    android:id="@+id/btnHistory"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:layout_marginBottom="10dp">
-
-                    <Button
-                        android:id="@+id/btnHistory"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:text="Alert History"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                    <!-- Active count badge — hidden when 0 -->
-                    <TextView
-                        android:id="@+id/tvHistoryBadge"
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:layout_gravity="end|top"
-                        android:layout_marginTop="5dp"
-                        android:layout_marginEnd="5dp"
-                        android:gravity="center"
-                        android:textSize="11sp"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:background="@drawable/shape_badge_red"
-                        android:visibility="gone" />
-
-                </FrameLayout>
+                    android:layout_marginBottom="10dp"
+                    android:text="Alert History"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
 
                 <Button
                     android:id="@+id/btnTestAlert"

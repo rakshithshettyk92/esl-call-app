@@ -62,12 +62,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnHistory:            Button
     private lateinit var btnTestAlert:          Button
     private lateinit var btnLogout:             Button
-    private lateinit var layoutActiveCalls:     LinearLayout
-    private lateinit var tvActiveCallsCount:    TextView
-    private lateinit var tvActiveCountStatus:   TextView
-    private lateinit var tvHistoryBadge:        TextView
-    private lateinit var viewActiveCallsPulse:  View
-    private lateinit var btnRespondNow:         Button
+    private lateinit var layoutActiveCalls:    LinearLayout
+    private lateinit var tvActiveCallsCount:   TextView
+    private lateinit var tvActiveCountStatus:  TextView
+    private lateinit var viewActiveCallsPulse: View
+    private lateinit var btnRespondNow:        Button
 
     private var pulseAnimator:       AnimatorSet? = null
     private var activeCallsAnimator: AnimatorSet? = null
@@ -242,7 +241,6 @@ class MainActivity : AppCompatActivity() {
         etUsername.text.clear()
         etPassword.text.clear()
         tvLoginError.visibility = View.GONE
-        tvHistoryBadge.visibility = View.GONE
         stopPulse()
         stopActiveCallsPulse()
     }
@@ -294,16 +292,6 @@ class MainActivity : AppCompatActivity() {
                 tvActiveCountStatus.text      = "No active calls"
                 tvActiveCountStatus.setTextColor(
                     resources.getColor(R.color.text_secondary, theme))
-            }
-        }
-
-        // Badge on the History button
-        if (::tvHistoryBadge.isInitialized) {
-            if (count > 0) {
-                tvHistoryBadge.text       = if (count > 9) "9+" else count.toString()
-                tvHistoryBadge.visibility = View.VISIBLE
-            } else {
-                tvHistoryBadge.visibility = View.GONE
             }
         }
 
@@ -405,7 +393,6 @@ class MainActivity : AppCompatActivity() {
         layoutActiveCalls    = findViewById(R.id.layoutActiveCalls)
         tvActiveCallsCount   = findViewById(R.id.tvActiveCallsCount)
         tvActiveCountStatus  = findViewById(R.id.tvActiveCountStatus)
-        tvHistoryBadge       = findViewById(R.id.tvHistoryBadge)
         viewActiveCallsPulse = findViewById(R.id.viewActiveCallsPulse)
         btnRespondNow        = findViewById(R.id.btnRespondNow)
     }
