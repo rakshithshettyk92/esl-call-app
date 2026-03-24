@@ -377,7 +377,7 @@ class AlertActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun startRingtone() {
-        stopRingtone()  // don't stack multiple plays
+        if (ringtone != null) return  // already ringing — preserve the original 30 s window
         try {
             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ringtone = RingtoneManager.getRingtone(this, uri)?.also { rt ->
