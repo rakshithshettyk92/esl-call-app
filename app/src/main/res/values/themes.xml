@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.ESLCallApp" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary</item>
+    </style>
+
+    <!-- Full-screen alert: dark red, no action bar, no title -->
+    <style name="Theme.ESLCallApp.Alert" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:windowBackground">@color/alert_background</item>
+        <item name="android:statusBarColor">@color/alert_background</item>
+        <item name="android:navigationBarColor">@color/alert_background</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+</resources>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/alert_background">
+
+    <!-- Close (✕) button pinned to top-right -->
+    <ImageButton
+        android:id="@+id/btnClose"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:src="@drawable/ic_close"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close" />
+
+    <!-- Centred content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <!-- Bell icon -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔔"
+            android:textSize="64sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Heading -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Employee Call"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:textColor="@color/alert_title"
+            android:gravity="center" />
+
+        <!-- Detail message from webhook -->
+        <TextView
+            android:id="@+id/tvAlertMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text=""
+            android:textSize="18sp"
+            android:textColor="@color/alert_message"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.3" />
+
+        <!-- Spacer -->
+        <View android:layout_width="0dp" android:layout_height="40dp" />
+
+        <!-- On My Way — primary action -->
+        <Button
+            android:id="@+id/btnOnMyWay"
+            android:layout_width="260dp"
+            android:layout_height="56dp"
+            android:text="On My Way"
+            android:textSize="18sp"
+            android:backgroundTint="#FFFFFF"
+            android:textColor="@color/alert_background"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Dismiss — closes popup, no action triggered -->
+        <Button
+            android:id="@+id/btnDismiss"
+            android:layout_width="260dp"
+            android:layout_height="48dp"
+            android:text="Dismiss"
+            android:textSize="16sp"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:textColor="@color/alert_title"
+            android:strokeColor="@color/alert_title" />
+
+    </LinearLayout>
+
+</FrameLayout>

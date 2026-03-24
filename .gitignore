@@ -1,0 +1,17 @@
+# Built artifacts
+*.apk
+*.aab
+*.dex
+*.class
+build/
+.gradle/
+
+# Local config (contains SDK path, do not commit)
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Google services (contains sensitive keys)
+app/google-services.json
