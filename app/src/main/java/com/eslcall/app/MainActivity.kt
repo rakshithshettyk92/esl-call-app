@@ -315,6 +315,9 @@ class MainActivity : AppCompatActivity() {
         } else {
             layoutActiveCalls.visibility = View.GONE
             stopActiveCallsPulse()
+            // All alerts handled — clear any lingering grouped notification from shade
+            (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                .cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
         }
     }
 

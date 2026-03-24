@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Solum-inspired swirl emblem.
-  Yin-yang style S-swirl (two interlocked arcs) inside a circle outline,
-  matching Solum's modernized swirl identity mark.
-  Renders in white for use on the dark Maastricht Blue header.
+  Solum-inspired swirl emblem — yin-yang S-swirl inside a circle outline.
+  Uses only <path> elements (no <circle>) for AAPT compatibility.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="44dp"
@@ -11,43 +9,26 @@
     android:viewportWidth="44"
     android:viewportHeight="44">
 
-    <!-- Outer circle ring -->
+    <!-- Outer circle ring (two semicircular arcs, stroke only) -->
     <path
-        android:pathData="M22,2 A20,20 0 1,1 21.999,2 Z"
+        android:pathData="M22,2 A20,20 0 0,1 22,42 A20,20 0 0,1 22,2 Z"
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.2" />
+        android:strokeWidth="2" />
 
-    <!-- S-swirl fill — right half outer arc + two inner semicircles -->
+    <!-- S-swirl fill: right outer arc + two inner semicircles = yin-yang yang half -->
     <path
-        android:pathData="M22,2
-                          A20,20 0 0,1 22,42
-                          A10,10 0 0,0 22,22
-                          A10,10 0 0,1 22,2
-                          Z"
+        android:pathData="M22,2 A20,20 0 0,1 22,42 A10,10 0 0,0 22,22 A10,10 0 0,1 22,2 Z"
         android:fillColor="#FFFFFF" />
 
-    <!-- Small solid dot — top inner circle (yang dot) -->
-    <circle
-        android:centerX="22"
-        android:centerY="12"
-        android:radius="3.5"
-        android:fillColor="#FFFFFF" />
-
-    <!-- Small hollow dot — bottom inner circle (yin dot) -->
-    <circle
-        android:centerX="22"
-        android:centerY="32"
-        android:radius="3.5"
-        android:fillColor="#FFFFFF"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0" />
-
-    <!-- Punch out the yin dot so it reads as hollow (dark circle on white swirl) -->
-    <circle
-        android:centerX="22"
-        android:centerY="32"
-        android:radius="2.2"
+    <!-- Upper dark dot at (22,12) r=3 — yin dot inside yang territory -->
+    <path
+        android:pathData="M22,9 A3,3 0 0,1 22,15 A3,3 0 0,1 22,9 Z"
         android:fillColor="#001C3D" />
+
+    <!-- Lower white dot at (22,32) r=3 — yang dot inside yin territory -->
+    <path
+        android:pathData="M22,29 A3,3 0 0,1 22,35 A3,3 0 0,1 22,29 Z"
+        android:fillColor="#FFFFFF" />
 
 </vector>
