@@ -92,7 +92,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             )
             val builder = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setColor(0xFF001C3D.toInt())
+                .setColor(0xFF2F006D.toInt())
                 .setContentTitle("Employee Call")
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -140,7 +140,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             // shade as a badge carrier only; it must never pop up as a heads-up banner.
             val grouped = NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setColor(0xFF001C3D.toInt())
+                .setColor(0xFF2F006D.toInt())
                 .setContentTitle("$queueSize Active Employee Calls")
                 .setContentText("Tap to view and respond")
                 .setStyle(inboxStyle)

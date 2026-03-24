@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Solum brand — Maastricht blue palette (per Solum ESL brand identity) -->
-    <color name="primary">#001C3D</color>
-    <color name="primary_light">#0A4080</color>
-    <color name="primary_dark">#000E1F</color>
+    <!--
+        Official SOLUM Brand Identity (2025)
+          Primary  — SOLUM Blue:   #2F006D  (Pantone 2685 C, RGB 47,0,109)
+          Secondary Blue:          #001973  (Pantone 2747 C, RGB 0,25,115)
+          Accent   — Yellow:       #FFCD00  (Pantone 116 C)
+          Gray:                    #EBEAEB  (Cool Gray 1 C)
+          Source: solum-group.com/solum/the-company/brand-identity
+    -->
+    <color name="primary">#2F006D</color>
+    <color name="primary_light">#001973</color>
+    <color name="primary_dark">#1A003D</color>
+    <color name="accent">#FFCD00</color>
 
     <!-- Surfaces -->
     <color name="background">#F4F6F9</color>
@@ -16,7 +24,7 @@
 
     <!-- Status -->
     <color name="green">#00897B</color>
-    <color name="pulse_color">#A5D6A7</color>
+    <color name="pulse_color">#CE93D8</color>
 
     <!-- Alert screen -->
     <color name="alert_background">#C62828</color>

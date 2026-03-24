@@ -172,7 +172,7 @@ class ActiveCallsActivity : AppCompatActivity() {
         val notif = androidx.core.app.NotificationCompat
             .Builder(this, MyFirebaseMessagingService.STATUS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(0xFF001C3D.toInt())
+            .setColor(0xFF2F006D.toInt())
             .setContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
             .setContentText("Tap to view and respond")
             .setStyle(style)

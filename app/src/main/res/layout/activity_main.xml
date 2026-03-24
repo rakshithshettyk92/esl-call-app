@@ -40,7 +40,7 @@
                 android:text="SOLUM"
                 android:textSize="10sp"
                 android:letterSpacing="0.25"
-                android:textColor="#7FAADD"
+                android:textColor="#FFCD00"
                 android:textAllCaps="true" />
 
             <TextView
@@ -57,7 +57,7 @@
                 android:layout_marginTop="1dp"
                 android:text="Staff Alert &amp; Response System"
                 android:textSize="11sp"
-                android:textColor="#99BFEE" />
+                android:textColor="#CEB8E8" />
 
         </LinearLayout>
 
