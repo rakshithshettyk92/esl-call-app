@@ -5,6 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -49,6 +52,9 @@ class AlertActivity : AppCompatActivity() {
     private var currentNotifId:         Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
     private var currentReceivedAt:      Long   = 0L
     private var isTransitioningToList:  Boolean = false
+
+    private var ringtone:               Ringtone? = null
+    private val ringtoneHandler         = Handler(Looper.getMainLooper())
 
     // When 2nd alert arrives, transition to the active calls list screen
     private val switchToListReceiver = object : BroadcastReceiver() {
@@ -179,9 +185,11 @@ class AlertActivity : AppCompatActivity() {
         // Timer counts down the time remaining since the FCM message was received,
         // not since this screen opened.
         restartCountdown()
+        startRingtone()
     }
 
     private fun dismissCurrent(status: AlertStatus) {
+        stopRingtone()
         val alert = AlertQueueStore.dequeue(this)
         if (alert != null) {
             AlertHistoryStore.save(
@@ -248,6 +256,7 @@ class AlertActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun triggerAcknowledge(companyCode: String, labelCode: String, message: String) {
+        stopRingtone()
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text      = "Sending..."
         btnDismiss.isEnabled = false
@@ -356,10 +365,39 @@ class AlertActivity : AppCompatActivity() {
     }
 
     private fun navigateToMain() {
+        stopRingtone()
         startActivity(Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         })
         finish()
+    }
+
+    // -------------------------------------------------------------------------
+    // Ringtone — plays for up to 30 s or until the user acts
+    // -------------------------------------------------------------------------
+
+    private fun startRingtone() {
+        stopRingtone()  // don't stack multiple plays
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            ringtone = RingtoneManager.getRingtone(this, uri)?.also { rt ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    rt.audioAttributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                }
+                rt.play()
+            }
+            // Auto-stop after 30 seconds regardless of user action
+            ringtoneHandler.postDelayed({ stopRingtone() }, 30_000)
+        } catch (_: Exception) {}
+    }
+
+    private fun stopRingtone() {
+        ringtoneHandler.removeCallbacksAndMessages(null)
+        try { ringtone?.stop() } catch (_: Exception) {}
+        ringtone = null
     }
 
     // -------------------------------------------------------------------------
@@ -374,10 +412,12 @@ class AlertActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         AppForegroundTracker.isInForeground = false
+        stopRingtone()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        stopRingtone()
         countDownTimer?.cancel()
         try { unregisterReceiver(cancelReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(switchToListReceiver) } catch (_: Exception) {}
