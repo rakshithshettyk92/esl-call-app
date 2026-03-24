@@ -2,6 +2,7 @@ package com.eslcall.app
 
 import android.app.NotificationManager
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
@@ -10,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -29,11 +31,13 @@ class AlertActivity : AppCompatActivity() {
         private const val AUTO_DISMISS_MS = 60_000L
     }
 
-    private val autoDismissHandler  = Handler(Looper.getMainLooper())
-    private val autoDismissRunnable = Runnable { finish() }
+    private var countDownTimer: CountDownTimer? = null
 
-    private lateinit var btnOnMyWay: Button
-    private lateinit var btnDismiss: Button
+    private lateinit var btnOnMyWay:        Button
+    private lateinit var btnDismiss:        Button
+    private lateinit var progressCountdown: CircularProgressIndicator
+    private lateinit var tvCountdown:       TextView
+    private lateinit var tvAutoDismiss:     TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,8 +52,11 @@ class AlertActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_alert)
 
-        btnOnMyWay = findViewById(R.id.btnOnMyWay)
-        btnDismiss = findViewById(R.id.btnDismiss)
+        btnOnMyWay        = findViewById(R.id.btnOnMyWay)
+        btnDismiss        = findViewById(R.id.btnDismiss)
+        progressCountdown = findViewById(R.id.progressCountdown)
+        tvCountdown       = findViewById(R.id.tvCountdown)
+        tvAutoDismiss     = findViewById(R.id.tvAutoDismiss)
 
         applyIntent(intent)
 
@@ -57,14 +64,13 @@ class AlertActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnClose).setOnClickListener { finish() }
         btnDismiss.setOnClickListener { finish() }
 
-        autoDismissHandler.postDelayed(autoDismissRunnable, AUTO_DISMISS_MS)
+        startCountdown()
     }
 
     override fun onNewIntent(intent: android.content.Intent?) {
         super.onNewIntent(intent)
         intent?.let { applyIntent(it) }
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        autoDismissHandler.postDelayed(autoDismissRunnable, AUTO_DISMISS_MS)
+        restartCountdown()
     }
 
     private fun applyIntent(intent: android.content.Intent) {
@@ -80,18 +86,39 @@ class AlertActivity : AppCompatActivity() {
 
         btnOnMyWay.setOnClickListener {
             if (companyCode.isNotBlank() && labelCode.isNotBlank()) {
-                triggerAcknowledge(companyCode, labelCode)
+                triggerAcknowledge(companyCode, labelCode, message)
             } else {
-                // No ESL data — just close
                 finish()
             }
         }
     }
 
-    private fun triggerAcknowledge(companyCode: String, labelCode: String) {
+    private fun startCountdown() {
+        val totalMs = AUTO_DISMISS_MS
+        countDownTimer = object : CountDownTimer(totalMs, 1_000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val secondsLeft = (millisUntilFinished / 1_000).toInt()
+                val progress    = (millisUntilFinished * 100 / totalMs).toInt()
+                tvCountdown.text       = secondsLeft.toString()
+                tvAutoDismiss.text     = "Auto-closing in ${secondsLeft}s"
+                progressCountdown.progress = progress
+            }
+            override fun onFinish() {
+                finish()
+            }
+        }.start()
+    }
+
+    private fun restartCountdown() {
+        countDownTimer?.cancel()
+        startCountdown()
+    }
+
+    private fun triggerAcknowledge(companyCode: String, labelCode: String, message: String) {
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text      = "Sending..."
         btnDismiss.isEnabled = false
+        countDownTimer?.cancel()
 
         // Dismiss the tray notification
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
@@ -122,13 +149,23 @@ class AlertActivity : AppCompatActivity() {
 
             runOnUiThread {
                 if (success) {
+                    // Save to history
+                    AlertHistoryStore.save(
+                        this,
+                        AlertHistoryItem(
+                            message     = message,
+                            companyCode = companyCode,
+                            labelCode   = labelCode,
+                            timestamp   = System.currentTimeMillis()
+                        )
+                    )
                     btnOnMyWay.text = "On My Way ✓"
-                    // Close alert after brief confirmation
                     Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1_500)
                 } else {
                     btnOnMyWay.isEnabled = true
                     btnOnMyWay.text      = "On My Way"
                     btnDismiss.isEnabled = true
+                    startCountdown()
                     Toast.makeText(this, "Could not reach server — try again", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -137,6 +174,6 @@ class AlertActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
+        countDownTimer?.cancel()
     }
 }

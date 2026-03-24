@@ -1,163 +1,313 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
     android:background="@color/background">
 
-    <!-- Header -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_gravity="center_horizontal"
-        android:text="ESL Call"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="24dp"
-        android:background="@color/divider" />
-
     <!-- ================================================================ -->
-    <!-- LOGIN section — shown when not authenticated                      -->
+    <!-- SOLUM branded header                                              -->
     <!-- ================================================================ -->
     <LinearLayout
-        android:id="@+id/layoutLogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:visibility="visible">
+        android:background="@color/primary"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="40dp"
+        android:paddingBottom="24dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sign in to AIMS"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginBottom="16dp" />
+            android:text="SOLUM"
+            android:textSize="11sp"
+            android:letterSpacing="0.20"
+            android:textColor="#80B3FF"
+            android:textAllCaps="true" />
 
-        <EditText
-            android:id="@+id/etUsername"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:hint="Username / Email"
-            android:inputType="textEmailAddress"
-            android:background="@drawable/card_background"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Password field with eye toggle -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginBottom="8dp">
-
-            <EditText
-                android:id="@+id/etPassword"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:hint="Password"
-                android:inputType="textPassword"
-                android:background="@drawable/card_background"
-                android:paddingStart="12dp"
-                android:paddingEnd="52dp" />
-
-            <ImageButton
-                android:id="@+id/btnTogglePassword"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="end|center_vertical"
-                android:src="@drawable/ic_eye"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Toggle password visibility"
-                android:tint="@color/text_secondary" />
-
-        </FrameLayout>
-
-        <!-- Login error message -->
         <TextView
-            android:id="@+id/tvLoginError"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text=""
-            android:textColor="#D32F2F"
-            android:textSize="13sp"
-            android:visibility="gone" />
+            android:text="ESL Call"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/white" />
 
-        <Button
-            android:id="@+id/btnLogin"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="Login"
-            android:backgroundTint="@color/primary" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Electronic Shelf Label Alert System"
+            android:textSize="12sp"
+            android:textColor="#99C2FF" />
 
     </LinearLayout>
 
-    <!-- ================================================================ -->
-    <!-- READY section — shown when authenticated                          -->
-    <!-- ================================================================ -->
-    <LinearLayout
-        android:id="@+id/layoutReady"
+    <!-- Scrollable body -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-        <!-- Status card -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/card_background"
-            android:padding="16dp">
+            android:padding="20dp">
 
-            <TextView
-                android:id="@+id/tvReadyUser"
-                android:layout_width="wrap_content"
+            <!-- ============================================================ -->
+            <!-- LOGIN section                                                 -->
+            <!-- ============================================================ -->
+            <LinearLayout
+                android:id="@+id/layoutLogin"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text=""
-                android:textSize="14sp"
-                android:textColor="@color/text_secondary" />
+                android:orientation="vertical"
+                android:visibility="visible">
 
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:text="Sign in to AIMS"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <!-- Username -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="Username / Email"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+
+                <EditText
+                    android:id="@+id/etUsername"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:hint="Enter username or email"
+                    android:inputType="textEmailAddress"
+                    android:background="@drawable/card_background"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Password -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="Password"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+
+                <!-- Password field with eye toggle -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="8dp">
+
+                    <EditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:hint="Enter password"
+                        android:inputType="textPassword"
+                        android:background="@drawable/card_background"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="52dp"
+                        android:textSize="15sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnTogglePassword"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:src="@drawable/ic_eye"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Toggle password visibility"
+                        android:tint="@color/text_secondary" />
+
+                </FrameLayout>
+
+                <!-- Login error -->
+                <TextView
+                    android:id="@+id/tvLoginError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:text=""
+                    android:textColor="#D32F2F"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnLogin"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Sign In"
+                    android:textSize="15sp"
+                    android:backgroundTint="@color/primary" />
+
+            </LinearLayout>
+
+            <!-- ============================================================ -->
+            <!-- READY section                                                 -->
+            <!-- ============================================================ -->
+            <LinearLayout
+                android:id="@+id/layoutReady"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="● Ready"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/green" />
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Status card with pulsing dot -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="20dp"
+                    android:layout_marginBottom="16dp">
+
+                    <!-- Pulsing dot + status text -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <!-- Pulse container -->
+                        <FrameLayout
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_marginEnd="10dp">
+
+                            <!-- Outer pulse ring (animated) -->
+                            <View
+                                android:id="@+id/viewPulseRing"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_gravity="center"
+                                android:background="@drawable/shape_circle_pulse"
+                                android:alpha="0.6" />
+
+                            <!-- Inner solid dot -->
+                            <View
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:layout_gravity="center"
+                                android:background="@drawable/shape_circle_green" />
+
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ready — Listening for calls"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/green" />
+
+                            <TextView
+                                android:id="@+id/tvReadyUser"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Last alert section (hidden until first alert) -->
+                    <LinearLayout
+                        android:id="@+id/layoutLastAlert"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginBottom="12dp"
+                            android:background="@color/divider" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LAST ALERT"
+                            android:textSize="10sp"
+                            android:textColor="@color/text_secondary"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.10"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvLastAlertMessage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvLastAlertTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textSize="12sp"
+                            android:textColor="@color/text_secondary"
+                            android:layout_marginTop="2dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Action buttons -->
+                <Button
+                    android:id="@+id/btnHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Alert History"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                <Button
+                    android:id="@+id/btnTestAlert"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Test Alert Popup"
+                    android:backgroundTint="@color/primary" />
+
+                <Button
+                    android:id="@+id/btnLogout"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Logout"
+                    style="@style/Widget.Material3.Button.TextButton" />
+
+            </LinearLayout>
 
         </LinearLayout>
-
-        <!-- Spacer -->
-        <View android:layout_width="0dp" android:layout_height="24dp" />
-
-        <Button
-            android:id="@+id/btnTestAlert"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginBottom="12dp"
-            android:text="Test Alert Popup"
-            android:backgroundTint="@color/primary" />
-
-        <Button
-            android:id="@+id/btnLogout"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="Logout"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-    </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

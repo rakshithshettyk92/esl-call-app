@@ -1,6 +1,8 @@
 package com.eslcall.app
 
 import android.Manifest
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -8,6 +10,7 @@ import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -22,6 +25,8 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,17 +43,24 @@ class MainActivity : AppCompatActivity() {
         }
 
     // Views
-    private lateinit var layoutLogin:  LinearLayout
-    private lateinit var layoutReady:  LinearLayout
-    private lateinit var etUsername:   EditText
-    private lateinit var etPassword:   EditText
+    private lateinit var layoutLogin:       LinearLayout
+    private lateinit var layoutReady:       LinearLayout
+    private lateinit var layoutLastAlert:   LinearLayout
+    private lateinit var etUsername:        EditText
+    private lateinit var etPassword:        EditText
     private lateinit var btnLogin:          Button
     private lateinit var btnTogglePassword: ImageButton
     private lateinit var tvLoginError:      TextView
     private lateinit var tvReadyUser:       TextView
-    private lateinit var tvStatus:     TextView
-    private lateinit var btnTestAlert: Button
-    private lateinit var btnLogout:    Button
+    private lateinit var tvStatus:          TextView
+    private lateinit var tvLastAlertMessage:TextView
+    private lateinit var tvLastAlertTime:   TextView
+    private lateinit var viewPulseRing:     View
+    private lateinit var btnHistory:        Button
+    private lateinit var btnTestAlert:      Button
+    private lateinit var btnLogout:         Button
+
+    private var pulseAnimator: AnimatorSet? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +72,15 @@ class MainActivity : AppCompatActivity() {
 
         btnLogin.setOnClickListener { attemptLogin() }
         btnLogout.setOnClickListener { attemptLogout() }
+        btnHistory.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+        btnTestAlert.setOnClickListener {
+            startActivity(Intent(this, AlertActivity::class.java).apply {
+                putExtra(AlertActivity.EXTRA_MESSAGE, "Test — Shelf A3, Aisle 2")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            })
+        }
 
         // Password visibility toggle
         var passwordVisible = false
@@ -75,15 +96,16 @@ class MainActivity : AppCompatActivity() {
             }
             etPassword.setSelection(pos)
         }
-        btnTestAlert.setOnClickListener {
-            startActivity(Intent(this, AlertActivity::class.java).apply {
-                putExtra(AlertActivity.EXTRA_MESSAGE, "Test — Shelf A3, Aisle 2")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            })
-        }
 
-        // Check current login state from relay
         checkAuthStatus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh last alert when returning from history or alert screen
+        if (layoutReady.visibility == View.VISIBLE) {
+            refreshLastAlert()
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -95,12 +117,12 @@ class MainActivity : AppCompatActivity() {
         val password = etPassword.text.toString().trim()
 
         if (username.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Enter username and password", Toast.LENGTH_SHORT).show()
+            showLoginError("Enter username and password")
             return
         }
 
         btnLogin.isEnabled = false
-        btnLogin.text = "Logging in..."
+        btnLogin.text = "Signing in..."
 
         Thread {
             try {
@@ -109,12 +131,12 @@ class MainActivity : AppCompatActivity() {
                     put("password", password)
                 }.toString()
 
-                val result = postToRelay("/auth/login", body)
+                val result  = postToRelay("/auth/login", body)
                 val success = result.optString("status") == "ok"
 
                 runOnUiThread {
                     btnLogin.isEnabled = true
-                    btnLogin.text = "Login"
+                    btnLogin.text      = "Sign In"
                     if (success) {
                         tvLoginError.visibility = View.GONE
                         saveUsername(username)
@@ -126,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     btnLogin.isEnabled = true
-                    btnLogin.text = "Login"
+                    btnLogin.text      = "Sign In"
                     showLoginError("Could not connect to server")
                 }
             }
@@ -141,9 +163,7 @@ class MainActivity : AppCompatActivity() {
         btnLogout.isEnabled = false
 
         Thread {
-            try {
-                postToRelay("/auth/logout", "{}")
-            } catch (_: Exception) { /* best-effort */ }
+            try { postToRelay("/auth/logout", "{}") } catch (_: Exception) {}
 
             runOnUiThread {
                 btnLogout.isEnabled = true
@@ -161,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkAuthStatus() {
         Thread {
             try {
-                val result = getFromRelay("/auth/status")
+                val result   = getFromRelay("/auth/status")
                 val loggedIn = result.optBoolean("loggedIn", false)
                 val username = result.optString("username", "")
 
@@ -175,7 +195,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                // Relay unreachable — fall back to locally stored state
                 runOnUiThread {
                     val savedUser = getSavedUsername()
                     if (savedUser != null) showReadyState(savedUser)
@@ -195,18 +214,77 @@ class MainActivity : AppCompatActivity() {
         etUsername.text.clear()
         etPassword.text.clear()
         tvLoginError.visibility = View.GONE
-    }
-
-    private fun showLoginError(message: String) {
-        tvLoginError.text = message
-        tvLoginError.visibility = View.VISIBLE
+        stopPulse()
     }
 
     private fun showReadyState(username: String) {
         layoutLogin.visibility = View.GONE
         layoutReady.visibility = View.VISIBLE
-        tvReadyUser.text = "Logged in as $username"
-        tvStatus.text = "● Ready — listening for calls"
+        tvReadyUser.text       = "Signed in as $username"
+        tvStatus.text          = "Ready — Listening for calls"
+        startPulse()
+        refreshLastAlert()
+    }
+
+    private fun showLoginError(message: String) {
+        tvLoginError.text       = message
+        tvLoginError.visibility = View.VISIBLE
+    }
+
+    // -------------------------------------------------------------------------
+    // Last alert display
+    // -------------------------------------------------------------------------
+
+    private fun refreshLastAlert() {
+        val history = AlertHistoryStore.load(this)
+        if (history.isNotEmpty()) {
+            val latest = history.first()
+            tvLastAlertMessage.text  = latest.message
+            tvLastAlertTime.text     = "${latest.relativeDay()}, ${latest.formattedTimeOnly()}"
+            layoutLastAlert.visibility = View.VISIBLE
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Pulse animation
+    // -------------------------------------------------------------------------
+
+    private fun startPulse() {
+        stopPulse()
+        val scaleX = ObjectAnimator.ofFloat(viewPulseRing, "scaleX", 1f, 2f)
+        val scaleY = ObjectAnimator.ofFloat(viewPulseRing, "scaleY", 1f, 2f)
+        val alpha  = ObjectAnimator.ofFloat(viewPulseRing, "alpha", 0.6f, 0f)
+
+        pulseAnimator = AnimatorSet().apply {
+            playTogether(scaleX, scaleY, alpha)
+            duration       = 1_200
+            interpolator   = AccelerateDecelerateInterpolator()
+            repeatCount    // set on individual animators below
+        }
+
+        listOf(scaleX, scaleY, alpha).forEach {
+            it.repeatCount = ObjectAnimator.INFINITE
+            it.duration    = 1_200
+            it.interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        pulseAnimator = AnimatorSet().apply {
+            playTogether(scaleX, scaleY, alpha)
+        }
+        pulseAnimator?.start()
+    }
+
+    private fun stopPulse() {
+        pulseAnimator?.cancel()
+        pulseAnimator = null
+        viewPulseRing.scaleX = 1f
+        viewPulseRing.scaleY = 1f
+        viewPulseRing.alpha  = 0.6f
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopPulse()
     }
 
     // -------------------------------------------------------------------------
@@ -214,17 +292,22 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun bindViews() {
-        layoutLogin  = findViewById(R.id.layoutLogin)
-        layoutReady  = findViewById(R.id.layoutReady)
-        etUsername   = findViewById(R.id.etUsername)
-        etPassword   = findViewById(R.id.etPassword)
-        btnLogin          = findViewById(R.id.btnLogin)
-        btnTogglePassword = findViewById(R.id.btnTogglePassword)
-        tvLoginError      = findViewById(R.id.tvLoginError)
-        tvReadyUser       = findViewById(R.id.tvReadyUser)
-        tvStatus     = findViewById(R.id.tvStatus)
-        btnTestAlert = findViewById(R.id.btnTestAlert)
-        btnLogout    = findViewById(R.id.btnLogout)
+        layoutLogin        = findViewById(R.id.layoutLogin)
+        layoutReady        = findViewById(R.id.layoutReady)
+        layoutLastAlert    = findViewById(R.id.layoutLastAlert)
+        etUsername         = findViewById(R.id.etUsername)
+        etPassword         = findViewById(R.id.etPassword)
+        btnLogin           = findViewById(R.id.btnLogin)
+        btnTogglePassword  = findViewById(R.id.btnTogglePassword)
+        tvLoginError       = findViewById(R.id.tvLoginError)
+        tvReadyUser        = findViewById(R.id.tvReadyUser)
+        tvStatus           = findViewById(R.id.tvStatus)
+        tvLastAlertMessage = findViewById(R.id.tvLastAlertMessage)
+        tvLastAlertTime    = findViewById(R.id.tvLastAlertTime)
+        viewPulseRing      = findViewById(R.id.viewPulseRing)
+        btnHistory         = findViewById(R.id.btnHistory)
+        btnTestAlert       = findViewById(R.id.btnTestAlert)
+        btnLogout          = findViewById(R.id.btnLogout)
     }
 
     private fun postToRelay(path: String, body: String): JSONObject {
@@ -234,7 +317,7 @@ class MainActivity : AppCompatActivity() {
             setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
             doOutput = true
             connectTimeout = 10_000
-            readTimeout = 10_000
+            readTimeout    = 10_000
         }
         OutputStreamWriter(conn.outputStream).use { it.write(body) }
         val response = conn.inputStream.bufferedReader().readText()
@@ -246,7 +329,7 @@ class MainActivity : AppCompatActivity() {
             requestMethod = "GET"
             setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
             connectTimeout = 10_000
-            readTimeout = 10_000
+            readTimeout    = 10_000
         }
         val response = conn.inputStream.bufferedReader().readText()
         return JSONObject(response)

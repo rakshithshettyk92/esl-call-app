@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Main UI -->
-    <color name="primary">#1565C0</color>
-    <color name="background">#F5F7FA</color>
-    <color name="divider">#E0E0E0</color>
-    <color name="text_secondary">#757575</color>
-    <color name="green">#2E7D32</color>
+    <!-- Solum brand — Maastricht blue palette -->
+    <color name="primary">#002060</color>
+    <color name="primary_light">#0057B8</color>
+    <color name="primary_dark">#00144A</color>
+
+    <!-- Surfaces -->
+    <color name="background">#F4F6F9</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="divider">#E0E4EC</color>
+
+    <!-- Text -->
+    <color name="text_primary">#1A1A2E</color>
+    <color name="text_secondary">#6B7A9A</color>
+
+    <!-- Status -->
+    <color name="green">#00897B</color>
+    <color name="pulse_color">#A5D6A7</color>
 
     <!-- Alert screen -->
-    <color name="alert_background">#B71C1C</color>
+    <color name="alert_background">#C62828</color>
     <color name="alert_title">#FFFFFF</color>
     <color name="alert_message">#FFCDD2</color>
 

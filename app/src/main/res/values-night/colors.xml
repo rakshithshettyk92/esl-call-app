@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Solum dark mode palette -->
+    <color name="primary">#4A90D9</color>
+    <color name="primary_light">#5BA3E8</color>
+    <color name="primary_dark">#0A1E40</color>
+
+    <!-- Surfaces -->
+    <color name="background">#0D1421</color>
+    <color name="surface">#162038</color>
+    <color name="divider">#243050</color>
+
+    <!-- Text -->
+    <color name="text_primary">#E8EDF5</color>
+    <color name="text_secondary">#8FA3C4</color>
+
+    <!-- Status -->
+    <color name="green">#4DB6AC</color>
+    <color name="pulse_color">#80CBC4</color>
+</resources>

@@ -1,0 +1,50 @@
+package com.eslcall.app
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+
+object AlertHistoryStore {
+
+    private const val PREFS_NAME  = "alert_history"
+    private const val KEY_HISTORY = "history_json"
+    private const val MAX_ITEMS   = 50
+
+    fun save(context: Context, item: AlertHistoryItem) {
+        val prefs    = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val existing = prefs.getString(KEY_HISTORY, "[]")
+        val array    = try { JSONArray(existing) } catch (_: Exception) { JSONArray() }
+
+        val obj = JSONObject().apply {
+            put("message",     item.message)
+            put("companyCode", item.companyCode)
+            put("labelCode",   item.labelCode)
+            put("timestamp",   item.timestamp)
+        }
+
+        // Insert newest first, cap at MAX_ITEMS
+        val newArray = JSONArray()
+        newArray.put(obj)
+        for (i in 0 until minOf(array.length(), MAX_ITEMS - 1)) {
+            newArray.put(array.getJSONObject(i))
+        }
+
+        prefs.edit().putString(KEY_HISTORY, newArray.toString()).apply()
+    }
+
+    fun load(context: Context): List<AlertHistoryItem> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json  = prefs.getString(KEY_HISTORY, "[]")
+        val array = try { JSONArray(json) } catch (_: Exception) { return emptyList() }
+
+        return (0 until array.length()).map { i ->
+            val obj = array.getJSONObject(i)
+            AlertHistoryItem(
+                message     = obj.optString("message",     ""),
+                companyCode = obj.optString("companyCode", ""),
+                labelCode   = obj.optString("labelCode",   ""),
+                timestamp   = obj.optLong("timestamp",     0L)
+            )
+        }
+    }
+}

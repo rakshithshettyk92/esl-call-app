@@ -57,6 +57,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Alert history screen -->
+        <activity
+            android:name=".HistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History" />
+
         <!-- Re-subscribe to FCM topic after reboot -->
         <receiver
             android:name=".BootReceiver"
