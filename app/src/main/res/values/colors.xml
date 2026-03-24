@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Solum brand — Maastricht blue palette -->
-    <color name="primary">#002060</color>
-    <color name="primary_light">#0057B8</color>
-    <color name="primary_dark">#00144A</color>
+    <!-- Solum brand — Maastricht blue palette (per Solum ESL brand identity) -->
+    <color name="primary">#001C3D</color>
+    <color name="primary_light">#0A4080</color>
+    <color name="primary_dark">#000E1F</color>
 
     <!-- Surfaces -->
     <color name="background">#F4F6F9</color>

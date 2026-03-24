@@ -12,37 +12,54 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:background="@color/primary"
-        android:paddingStart="24dp"
+        android:paddingStart="20dp"
         android:paddingEnd="24dp"
         android:paddingTop="40dp"
-        android:paddingBottom="24dp">
+        android:paddingBottom="22dp"
+        android:gravity="center_vertical">
 
-        <TextView
+        <!-- Solum swirl logo -->
+        <ImageView
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_solum_logo"
+            android:contentDescription="SOLUM logo" />
+
+        <!-- Brand text column -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="SOLUM"
-            android:textSize="11sp"
-            android:letterSpacing="0.20"
-            android:textColor="#80B3FF"
-            android:textAllCaps="true" />
+            android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ESL Call"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/white" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SOLUM"
+                android:textSize="10sp"
+                android:letterSpacing="0.25"
+                android:textColor="#7FAADD"
+                android:textAllCaps="true" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Electronic Shelf Label Alert System"
-            android:textSize="12sp"
-            android:textColor="#99C2FF" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Employee Call"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="Staff Alert &amp; Response System"
+                android:textSize="11sp"
+                android:textColor="#99BFEE" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

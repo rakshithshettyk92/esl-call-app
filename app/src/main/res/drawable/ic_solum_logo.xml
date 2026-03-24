@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Solum-inspired swirl emblem.
+  Yin-yang style S-swirl (two interlocked arcs) inside a circle outline,
+  matching Solum's modernized swirl identity mark.
+  Renders in white for use on the dark Maastricht Blue header.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+
+    <!-- Outer circle ring -->
+    <path
+        android:pathData="M22,2 A20,20 0 1,1 21.999,2 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.2" />
+
+    <!-- S-swirl fill — right half outer arc + two inner semicircles -->
+    <path
+        android:pathData="M22,2
+                          A20,20 0 0,1 22,42
+                          A10,10 0 0,0 22,22
+                          A10,10 0 0,1 22,2
+                          Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Small solid dot — top inner circle (yang dot) -->
+    <circle
+        android:centerX="22"
+        android:centerY="12"
+        android:radius="3.5"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Small hollow dot — bottom inner circle (yin dot) -->
+    <circle
+        android:centerX="22"
+        android:centerY="32"
+        android:radius="3.5"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0" />
+
+    <!-- Punch out the yin dot so it reads as hollow (dark circle on white swirl) -->
+    <circle
+        android:centerX="22"
+        android:centerY="32"
+        android:radius="2.2"
+        android:fillColor="#001C3D" />
+
+</vector>
