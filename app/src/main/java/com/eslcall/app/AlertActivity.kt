@@ -168,7 +168,11 @@ class AlertActivity : AppCompatActivity() {
         }
 
         updatePendingBadge()
-        restartCountdown()
+        // Timer counts down the time remaining since the FCM message was received,
+        // not since this screen opened.
+        val elapsed   = System.currentTimeMillis() - alert.receivedAt
+        val remaining = AUTO_DISMISS_MS - elapsed
+        restartCountdown(remaining)
     }
 
     private fun dismissCurrent(status: AlertStatus) {
@@ -211,9 +215,14 @@ class AlertActivity : AppCompatActivity() {
     // Countdown timer
     // -------------------------------------------------------------------------
 
-    private fun restartCountdown() {
+    private fun restartCountdown(remainingMs: Long) {
         countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(AUTO_DISMISS_MS, 1_000) {
+        if (remainingMs <= 0) {
+            // Time already expired while the screen wasn't open — mark missed immediately
+            dismissCurrent(AlertStatus.MISSED)
+            return
+        }
+        countDownTimer = object : CountDownTimer(remainingMs, 1_000) {
             override fun onTick(millisUntilFinished: Long) {
                 val secondsLeft = (millisUntilFinished / 1_000).toInt()
                 val progress    = (millisUntilFinished * 100 / AUTO_DISMISS_MS).toInt()
