@@ -3,7 +3,10 @@ package com.eslcall.app
 import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -56,11 +59,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvLastAlertMessage:TextView
     private lateinit var tvLastAlertTime:   TextView
     private lateinit var viewPulseRing:     View
-    private lateinit var btnHistory:        Button
-    private lateinit var btnTestAlert:      Button
-    private lateinit var btnLogout:         Button
+    private lateinit var btnHistory:            Button
+    private lateinit var btnTestAlert:          Button
+    private lateinit var btnLogout:             Button
+    private lateinit var layoutActiveCalls:     LinearLayout
+    private lateinit var tvActiveCallsCount:    TextView
+    private lateinit var viewActiveCallsPulse:  View
+    private lateinit var btnRespondNow:         Button
 
-    private var pulseAnimator: AnimatorSet? = null
+    private var pulseAnimator:       AnimatorSet? = null
+    private var activeCallsAnimator: AnimatorSet? = null
+
+    private val activeListReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = refreshActiveCalls()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +86,9 @@ class MainActivity : AppCompatActivity() {
         btnLogout.setOnClickListener { attemptLogout() }
         btnHistory.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
+        }
+        btnRespondNow.setOnClickListener {
+            startActivity(Intent(this, ActiveCallsActivity::class.java))
         }
         btnTestAlert.setOnClickListener {
             startActivity(Intent(this, AlertActivity::class.java).apply {
@@ -102,10 +117,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Refresh last alert when returning from history or alert screen
+        ContextCompat.registerReceiver(
+            this, activeListReceiver,
+            IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        // Refresh when returning from history or alert screen
         if (layoutReady.visibility == View.VISIBLE) {
             refreshLastAlert()
+            refreshActiveCalls()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        try { unregisterReceiver(activeListReceiver) } catch (_: Exception) {}
     }
 
     // -------------------------------------------------------------------------
@@ -224,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         tvStatus.text          = "Ready — Listening for calls"
         startPulse()
         refreshLastAlert()
+        refreshActiveCalls()
     }
 
     private fun showLoginError(message: String) {
@@ -242,6 +269,48 @@ class MainActivity : AppCompatActivity() {
             tvLastAlertMessage.text  = latest.message
             tvLastAlertTime.text     = "${latest.relativeDay()}, ${latest.formattedTimeOnly()}"
             layoutLastAlert.visibility = View.VISIBLE
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Active calls card
+    // -------------------------------------------------------------------------
+
+    private fun refreshActiveCalls() {
+        val count = AlertQueueStore.loadAll(this)
+            .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
+            .size
+        if (count > 0) {
+            tvActiveCallsCount.text = "$count Active Call${if (count > 1) "s" else ""}"
+            layoutActiveCalls.visibility = View.VISIBLE
+            startActiveCallsPulse()
+        } else {
+            layoutActiveCalls.visibility = View.GONE
+            stopActiveCallsPulse()
+        }
+    }
+
+    private fun startActiveCallsPulse() {
+        if (activeCallsAnimator?.isRunning == true) return
+        val scaleX = ObjectAnimator.ofFloat(viewActiveCallsPulse, "scaleX", 1f, 2.2f)
+        val scaleY = ObjectAnimator.ofFloat(viewActiveCallsPulse, "scaleY", 1f, 2.2f)
+        val alpha  = ObjectAnimator.ofFloat(viewActiveCallsPulse, "alpha", 0.7f, 0f)
+        listOf(scaleX, scaleY, alpha).forEach {
+            it.repeatCount  = ObjectAnimator.INFINITE
+            it.duration     = 900
+            it.interpolator = AccelerateDecelerateInterpolator()
+        }
+        activeCallsAnimator = AnimatorSet().apply { playTogether(scaleX, scaleY, alpha) }
+        activeCallsAnimator?.start()
+    }
+
+    private fun stopActiveCallsPulse() {
+        activeCallsAnimator?.cancel()
+        activeCallsAnimator = null
+        if (::viewActiveCallsPulse.isInitialized) {
+            viewActiveCallsPulse.scaleX = 1f
+            viewActiveCallsPulse.scaleY = 1f
+            viewActiveCallsPulse.alpha  = 0.7f
         }
     }
 
@@ -278,6 +347,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopPulse()
+        stopActiveCallsPulse()
     }
 
     // -------------------------------------------------------------------------
@@ -298,9 +368,13 @@ class MainActivity : AppCompatActivity() {
         tvLastAlertMessage = findViewById(R.id.tvLastAlertMessage)
         tvLastAlertTime    = findViewById(R.id.tvLastAlertTime)
         viewPulseRing      = findViewById(R.id.viewPulseRing)
-        btnHistory         = findViewById(R.id.btnHistory)
-        btnTestAlert       = findViewById(R.id.btnTestAlert)
-        btnLogout          = findViewById(R.id.btnLogout)
+        btnHistory            = findViewById(R.id.btnHistory)
+        btnTestAlert          = findViewById(R.id.btnTestAlert)
+        btnLogout             = findViewById(R.id.btnLogout)
+        layoutActiveCalls     = findViewById(R.id.layoutActiveCalls)
+        tvActiveCallsCount    = findViewById(R.id.tvActiveCallsCount)
+        viewActiveCallsPulse  = findViewById(R.id.viewActiveCallsPulse)
+        btnRespondNow         = findViewById(R.id.btnRespondNow)
     }
 
     private fun postToRelay(path: String, body: String): JSONObject {

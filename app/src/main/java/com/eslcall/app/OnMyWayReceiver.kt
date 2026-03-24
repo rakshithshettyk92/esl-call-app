@@ -65,6 +65,25 @@ class OnMyWayReceiver : BroadcastReceiver() {
                 else
                     conn.errorStream.bufferedReader().readText()
                 Log.i(TAG, "Acknowledge response ($responseCode): $response")
+
+                if (responseCode == 200) {
+                    // Find alert details from queue before removing
+                    val alert = AlertQueueStore.loadAll(context)
+                        .find { it.labelCode == labelCode }
+                    AlertQueueStore.removeByLabelCode(context, labelCode)
+                    if (alert != null) {
+                        AlertHistoryStore.save(context, AlertHistoryItem(
+                            message     = alert.message,
+                            companyCode = alert.companyCode,
+                            labelCode   = alert.labelCode,
+                            timestamp   = System.currentTimeMillis(),
+                            status      = AlertStatus.ACKNOWLEDGED
+                        ))
+                    }
+                    context.sendBroadcast(
+                        Intent(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED)
+                    )
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Acknowledge failed: ${e.message}")
             }

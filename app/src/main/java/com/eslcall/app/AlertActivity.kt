@@ -42,9 +42,21 @@ class AlertActivity : AppCompatActivity() {
         private const val AUTO_DISMISS_MS = 60_000L
     }
 
-    private var countDownTimer:       CountDownTimer? = null
-    private var currentLabelCode:     String = ""
-    private var currentNotifId:       Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
+    private var countDownTimer:         CountDownTimer? = null
+    private var currentLabelCode:       String = ""
+    private var currentNotifId:         Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
+    private var isTransitioningToList:  Boolean = false
+
+    // When 2nd alert arrives, transition to the active calls list screen
+    private val switchToListReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            isTransitioningToList = true
+            startActivity(Intent(this@AlertActivity, ActiveCallsActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            })
+            finish()
+        }
+    }
 
     // Listens for cancel broadcasts (another device acknowledged, or banner On My Way)
     private val cancelReceiver = object : BroadcastReceiver() {
@@ -102,6 +114,11 @@ class AlertActivity : AppCompatActivity() {
         ContextCompat.registerReceiver(
             this, cancelReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_CANCEL_ALERT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        ContextCompat.registerReceiver(
+            this, switchToListReceiver,
+            IntentFilter(MyFirebaseMessagingService.ACTION_SWITCH_TO_LIST),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
@@ -329,21 +346,23 @@ class AlertActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()
-        unregisterReceiver(cancelReceiver)
+        try { unregisterReceiver(cancelReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(switchToListReceiver) } catch (_: Exception) {}
 
-        // Save any remaining queued alerts as MISSED (activity closed before user could act)
-        val remaining = AlertQueueStore.loadAll(this)
-        remaining.forEach { alert ->
-            AlertHistoryStore.save(
-                this, AlertHistoryItem(
-                    message     = alert.message,
-                    companyCode = alert.companyCode,
-                    labelCode   = alert.labelCode,
-                    timestamp   = System.currentTimeMillis(),
-                    status      = AlertStatus.MISSED
+        if (!isTransitioningToList) {
+            // Activity closed without transitioning — save remaining as MISSED and clear queue
+            AlertQueueStore.loadAll(this).forEach { alert ->
+                AlertHistoryStore.save(
+                    this, AlertHistoryItem(
+                        message     = alert.message,
+                        companyCode = alert.companyCode,
+                        labelCode   = alert.labelCode,
+                        timestamp   = System.currentTimeMillis(),
+                        status      = AlertStatus.MISSED
+                    )
                 )
-            )
+            }
+            AlertQueueStore.clear(this)
         }
-        AlertQueueStore.clear(this)
     }
 }

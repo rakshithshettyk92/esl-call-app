@@ -63,6 +63,12 @@
             android:exported="false"
             android:theme="@style/Theme.ESLCallApp.History" />
 
+        <!-- Active calls list (multiple simultaneous alerts) -->
+        <activity
+            android:name=".ActiveCallsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History" />
+
         <!-- Re-subscribe to FCM topic after reboot -->
         <receiver
             android:name=".BootReceiver"

@@ -1,0 +1,223 @@
+package com.eslcall.app
+
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Bundle
+import android.view.View
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import org.json.JSONObject
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+
+/**
+ * Shows all currently active (un-acknowledged) alerts in a scrollable list.
+ * Launched automatically when 2+ alerts are queued simultaneously.
+ * Each item has individual "On My Way" and "Dismiss" buttons.
+ */
+class ActiveCallsActivity : AppCompatActivity() {
+
+    private lateinit var tvSubtitle:    TextView
+    private lateinit var layoutEmpty:   LinearLayout
+    private lateinit var recycler:      RecyclerView
+    private lateinit var adapter:       ActiveCallsAdapter
+
+    private val nm get() = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+    // Refresh when new alert arrives or one is cancelled
+    private val refreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = refreshList()
+    }
+
+    private val cancelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val label = intent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE)
+                ?: return
+            AcknowledgedStore.markAcknowledged(this@ActiveCallsActivity, label)
+            AlertQueueStore.removeByLabelCode(this@ActiveCallsActivity, label)
+            refreshList()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_active_calls)
+
+        tvSubtitle  = findViewById(R.id.tvActiveCallsSubtitle)
+        layoutEmpty = findViewById(R.id.layoutActiveEmpty)
+        recycler    = findViewById(R.id.recyclerActiveCalls)
+
+        findViewById<ImageButton>(R.id.btnBackActiveCalls).setOnClickListener { finish() }
+
+        adapter = ActiveCallsAdapter(
+            items        = emptyList(),
+            onAcknowledge = { alert -> acknowledgeAlert(alert) },
+            onDismiss     = { alert -> dismissAlert(alert) }
+        )
+        recycler.layoutManager = LinearLayoutManager(this)
+        recycler.adapter       = adapter
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ContextCompat.registerReceiver(
+            this, refreshReceiver,
+            IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        ContextCompat.registerReceiver(
+            this, cancelReceiver,
+            IntentFilter(MyFirebaseMessagingService.ACTION_CANCEL_ALERT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        refreshList()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(refreshReceiver)
+        unregisterReceiver(cancelReceiver)
+    }
+
+    // -------------------------------------------------------------------------
+    // List management
+    // -------------------------------------------------------------------------
+
+    private fun refreshList() {
+        val alerts = AlertQueueStore.loadAll(this)
+            .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
+
+        tvSubtitle.text = if (alerts.isEmpty()) "All handled"
+        else "${alerts.size} call${if (alerts.size > 1) "s" else ""} waiting for response"
+
+        if (alerts.isEmpty()) {
+            recycler.visibility    = View.GONE
+            layoutEmpty.visibility = View.VISIBLE
+            nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+        } else {
+            recycler.visibility    = View.VISIBLE
+            layoutEmpty.visibility = View.GONE
+            adapter.updateItems(alerts)
+            updateGroupedNotification(alerts)
+        }
+    }
+
+    private fun updateGroupedNotification(alerts: List<PendingAlert>) {
+        val count = alerts.size
+        val style = androidx.core.app.NotificationCompat.InboxStyle()
+            .setBigContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
+        alerts.forEach { style.addLine(it.message) }
+
+        val pi = android.app.PendingIntent.getActivity(
+            this, 0, Intent(this, ActiveCallsActivity::class.java),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                    android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        val notif = androidx.core.app.NotificationCompat
+            .Builder(this, MyFirebaseMessagingService.ALERT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
+            .setContentText("Tap to view and respond")
+            .setStyle(style)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+            .setContentIntent(pi)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .build()
+        nm.notify(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID, notif)
+    }
+
+    // -------------------------------------------------------------------------
+    // Acknowledge
+    // -------------------------------------------------------------------------
+
+    private fun acknowledgeAlert(alert: PendingAlert) {
+        Thread {
+            try {
+                val body = JSONObject().apply {
+                    put("companyCode", alert.companyCode)
+                    put("labelCode",   alert.labelCode)
+                }.toString()
+
+                val conn = (URL("${Constants.RELAY_URL}/esl/acknowledge")
+                    .openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
+                    doOutput        = true
+                    connectTimeout  = 10_000
+                    readTimeout     = 10_000
+                }
+                OutputStreamWriter(conn.outputStream).use { it.write(body) }
+                val code = conn.responseCode
+                if (code < 400) conn.inputStream.bufferedReader().readText()
+                else conn.errorStream.bufferedReader().readText()
+
+                runOnUiThread {
+                    when (code) {
+                        200 -> {
+                            AcknowledgedStore.markAcknowledged(this, alert.labelCode)
+                            AlertHistoryStore.save(this, AlertHistoryItem(
+                                message     = alert.message,
+                                companyCode = alert.companyCode,
+                                labelCode   = alert.labelCode,
+                                timestamp   = System.currentTimeMillis(),
+                                status      = AlertStatus.ACKNOWLEDGED
+                            ))
+                            AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+                            nm.cancel(alert.notificationId)
+                            refreshList()
+                        }
+                        409 -> {
+                            // Already handled by another device
+                            AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+                            refreshList()
+                            Toast.makeText(this,
+                                "Already acknowledged by another device",
+                                Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            adapter.setItemIdle(alert.labelCode)
+                            Toast.makeText(this,
+                                "Could not reach server — try again",
+                                Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    adapter.setItemIdle(alert.labelCode)
+                    Toast.makeText(this, "Network error — try again", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
+    }
+
+    // -------------------------------------------------------------------------
+    // Dismiss
+    // -------------------------------------------------------------------------
+
+    private fun dismissAlert(alert: PendingAlert) {
+        AlertHistoryStore.save(this, AlertHistoryItem(
+            message     = alert.message,
+            companyCode = alert.companyCode,
+            labelCode   = alert.labelCode,
+            timestamp   = System.currentTimeMillis(),
+            status      = AlertStatus.DISMISSED
+        ))
+        AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+        nm.cancel(alert.notificationId)
+        refreshList()
+    }
+}

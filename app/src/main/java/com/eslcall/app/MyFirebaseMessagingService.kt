@@ -8,46 +8,42 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import java.util.UUID
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         const val ALERT_CHANNEL_ID        = "esl_alert_channel"
         const val ALERT_NOTIFICATION_ID   = 1002   // fallback only
+        const val GROUPED_NOTIFICATION_ID = 998    // used when 2+ alerts active
         const val TAG                     = "FCMService"
         const val ACTION_CANCEL_ALERT     = "com.eslcall.app.CANCEL_ALERT"
+        const val ACTION_SWITCH_TO_LIST   = "com.eslcall.app.SWITCH_TO_LIST"
+        const val ACTION_ACTIVE_LIST_CHANGED = "com.eslcall.app.ACTIVE_LIST_CHANGED"
         const val EXTRA_CANCEL_LABEL_CODE = "cancel_label_code"
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d(TAG, "FCM received from: ${remoteMessage.from}")
-
         val data = remoteMessage.data
 
-        // Cancel message — dismiss the alert for this specific labelCode
         if (data["type"] == "cancel") {
             val labelCode = data["labelCode"] ?: ""
-            Log.d(TAG, "FCM cancel received for labelCode: $labelCode")
-
-            // Mark acknowledged locally + remove from queue
+            Log.d(TAG, "FCM cancel for: $labelCode")
             AcknowledgedStore.markAcknowledged(this, labelCode)
             AlertQueueStore.removeByLabelCode(this, labelCode)
-
-            // Dismiss the tray notification for this label
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(notificationIdFor(labelCode))
-
-            // Broadcast so any open AlertActivity updates its display
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
                 putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
             })
+            sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
             return
         }
 
         val message     = data["message"]     ?: "Employee Call"
         val companyCode = data["companyCode"] ?: ""
         val labelCode   = data["labelCode"]   ?: ""
-
         triggerAlert(message, companyCode, labelCode)
     }
 
@@ -55,51 +51,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         ensureAlertChannel()
 
         val notifId = notificationIdFor(labelCode)
+        val nm      = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        // Full-screen intent — launches AlertActivity
-        val alertIntent = Intent(this, AlertActivity::class.java).apply {
-            putExtra(AlertActivity.EXTRA_MESSAGE,         message)
-            putExtra(AlertActivity.EXTRA_COMPANY_CODE,    companyCode)
-            putExtra(AlertActivity.EXTRA_LABEL_CODE,      labelCode)
-            putExtra(AlertActivity.EXTRA_NOTIFICATION_ID, notifId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-
-        val fullScreenPendingIntent = PendingIntent.getActivity(
-            this, notifId, alertIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // "On My Way" notification action — fires OnMyWayReceiver
-        val onMyWayIntent = Intent(this, OnMyWayReceiver::class.java).apply {
-            action = OnMyWayReceiver.ACTION_ON_MY_WAY
-            putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
-            putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
-        }
-        val onMyWayPendingIntent = PendingIntent.getBroadcast(
-            this, notifId, onMyWayIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Employee Call")
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setContentIntent(fullScreenPendingIntent)
-            .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        // Enqueue the alert — AlertActivity reads from queue, not from intent data
+        // Enqueue BEFORE checking size
         AlertQueueStore.enqueue(
             this, PendingAlert(
-                id             = java.util.UUID.randomUUID().toString(),
+                id             = UUID.randomUUID().toString(),
                 message        = message,
                 companyCode    = companyCode,
                 labelCode      = labelCode,
@@ -108,11 +65,83 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             )
         )
 
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(notifId, notification)
+        val queueSize = AlertQueueStore.size(this)
 
-        // Launch AlertActivity — if already open (singleTop) onNewIntent fires to update badge
-        startActivity(alertIntent)
+        // Notify MainActivity / ActiveCallsActivity to refresh
+        sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
+
+        if (queueSize == 1) {
+            // ── Single alert: full-screen popup + individual notification ──────
+            val alertIntent = Intent(this, AlertActivity::class.java).apply {
+                putExtra(AlertActivity.EXTRA_MESSAGE,         message)
+                putExtra(AlertActivity.EXTRA_COMPANY_CODE,    companyCode)
+                putExtra(AlertActivity.EXTRA_LABEL_CODE,      labelCode)
+                putExtra(AlertActivity.EXTRA_NOTIFICATION_ID, notifId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            val fullScreenPI = PendingIntent.getActivity(
+                this, notifId, alertIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val onMyWayIntent = Intent(this, OnMyWayReceiver::class.java).apply {
+                action = OnMyWayReceiver.ACTION_ON_MY_WAY
+                putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
+                putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
+            }
+            val onMyWayPI = PendingIntent.getBroadcast(
+                this, notifId, onMyWayIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Employee Call")
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setFullScreenIntent(fullScreenPI, true)
+                .setContentIntent(fullScreenPI)
+                .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
+                .setAutoCancel(true)
+                .build()
+            nm.notify(notifId, notification)
+            startActivity(alertIntent)
+
+        } else {
+            // ── Multiple alerts: cancel all individuals, show grouped ──────────
+            // Cancel individual notifications for every queued alert
+            AlertQueueStore.loadAll(this).forEach { nm.cancel(it.notificationId) }
+
+            val allAlerts  = AlertQueueStore.loadAll(this)
+            val inboxStyle = NotificationCompat.InboxStyle()
+                .setBigContentTitle("$queueSize Active Employee Calls")
+            allAlerts.forEach { inboxStyle.addLine(it.message) }
+
+            val activeCallsPI = PendingIntent.getActivity(
+                this, 0,
+                Intent(this, ActiveCallsActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val grouped = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("$queueSize Active Employee Calls")
+                .setContentText("Tap to view and respond")
+                .setStyle(inboxStyle)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setContentIntent(activeCallsPI)
+                .setAutoCancel(false)
+                .setOngoing(true)
+                .build()
+            nm.notify(GROUPED_NOTIFICATION_ID, grouped)
+
+            // Tell AlertActivity (if open) to transition to the list screen
+            sendBroadcast(Intent(ACTION_SWITCH_TO_LIST))
+        }
     }
 
     private fun ensureAlertChannel() {
