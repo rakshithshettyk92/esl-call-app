@@ -167,16 +167,15 @@ class ActiveCallsActivity : AppCompatActivity() {
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or
                     android.app.PendingIntent.FLAG_IMMUTABLE
         )
+        // STATUS_CHANNEL_ID has IMPORTANCE_DEFAULT — sits in the shade for badge
+        // count only, guaranteed never to pop up as a heads-up banner.
         val notif = androidx.core.app.NotificationCompat
-            .Builder(this, MyFirebaseMessagingService.ALERT_CHANNEL_ID)
+            .Builder(this, MyFirebaseMessagingService.STATUS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF001C3D.toInt())
             .setContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
             .setContentText("Tap to view and respond")
             .setStyle(style)
-            // Low priority — user is already on this screen, no heads-up banner needed.
-            // The notification stays in the shade to maintain the app icon badge count.
-            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pi)
             .setNumber(count)
             .setAutoCancel(false)

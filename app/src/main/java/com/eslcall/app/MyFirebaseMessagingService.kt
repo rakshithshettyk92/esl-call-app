@@ -13,7 +13,8 @@ import java.util.UUID
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val ALERT_CHANNEL_ID        = "esl_alert_channel_v2"  // bumped to pick up new sound/vibration
+        const val ALERT_CHANNEL_ID        = "esl_alert_channel_v2"  // IMPORTANCE_HIGH — real incoming alerts only
+        const val STATUS_CHANNEL_ID       = "esl_status_channel"   // IMPORTANCE_DEFAULT — ongoing badge/status, no heads-up
         const val ALERT_NOTIFICATION_ID   = 1002   // fallback only
         const val GROUPED_NOTIFICATION_ID = 998    // used when 2+ alerts active
         const val TAG                     = "FCMService"
@@ -51,6 +52,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun triggerAlert(message: String, companyCode: String, labelCode: String) {
         ensureAlertChannel()
+        ensureStatusChannel()
 
         val notifId = notificationIdFor(labelCode)
         val nm      = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -134,16 +136,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val grouped = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+            // Use STATUS_CHANNEL_ID (IMPORTANCE_DEFAULT) — this notification lives in the
+            // shade as a badge carrier only; it must never pop up as a heads-up banner.
+            val grouped = NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(0xFF001C3D.toInt())
                 .setContentTitle("$queueSize Active Employee Calls")
                 .setContentText("Tap to view and respond")
                 .setStyle(inboxStyle)
-                // No heads-up banner when user is already looking at the list
-                .setPriority(if (appForeground) NotificationCompat.PRIORITY_DEFAULT
-                             else NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(activeCallsPI)
                 .setNumber(queueSize)
                 .setAutoCancel(false)
@@ -154,6 +154,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             // Tell AlertActivity (if open) to transition to the list screen
             sendBroadcast(Intent(ACTION_SWITCH_TO_LIST))
         }
+    }
+
+    private fun ensureStatusChannel() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(STATUS_CHANNEL_ID) != null) return
+        // IMPORTANCE_DEFAULT = shows in shade + badge, but NO heads-up banner
+        NotificationChannel(STATUS_CHANNEL_ID, "Active Call Status",
+            NotificationManager.IMPORTANCE_DEFAULT).apply {
+            setSound(null, null)
+            enableVibration(false)
+        }.also { nm.createNotificationChannel(it) }
     }
 
     private fun ensureAlertChannel() {
