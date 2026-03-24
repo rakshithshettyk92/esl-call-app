@@ -94,6 +94,7 @@ class ActiveCallsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppForegroundTracker.isInForeground = true
         ContextCompat.registerReceiver(
             this, refreshReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
@@ -110,6 +111,7 @@ class ActiveCallsActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        AppForegroundTracker.isInForeground = false
         tickHandler.removeCallbacks(tickRunnable)
         unregisterReceiver(refreshReceiver)
         unregisterReceiver(cancelReceiver)

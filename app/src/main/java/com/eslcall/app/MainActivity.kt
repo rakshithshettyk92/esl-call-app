@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppForegroundTracker.isInForeground = true
         ContextCompat.registerReceiver(
             this, activeListReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
@@ -132,6 +133,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        AppForegroundTracker.isInForeground = false
         try { unregisterReceiver(activeListReceiver) } catch (_: Exception) {}
     }
 

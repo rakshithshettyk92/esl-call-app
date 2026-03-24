@@ -358,6 +358,16 @@ class AlertActivity : AppCompatActivity() {
     // Lifecycle
     // -------------------------------------------------------------------------
 
+    override fun onResume() {
+        super.onResume()
+        AppForegroundTracker.isInForeground = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AppForegroundTracker.isInForeground = false
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()

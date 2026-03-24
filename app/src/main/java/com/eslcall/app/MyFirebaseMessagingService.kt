@@ -67,8 +67,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             )
         )
 
-        val queueSize   = AlertQueueStore.size(this)
-        val appForeground = isAppForeground()
+        val queueSize     = AlertQueueStore.size(this)
+        val appForeground = AppForegroundTracker.isInForeground
 
         // Notify MainActivity / ActiveCallsActivity to refresh
         sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
@@ -154,14 +154,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             // Tell AlertActivity (if open) to transition to the list screen
             sendBroadcast(Intent(ACTION_SWITCH_TO_LIST))
         }
-    }
-
-    private fun isAppForeground(): Boolean {
-        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
-        return am.runningAppProcesses?.any {
-            it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
-                    it.processName == packageName
-        } ?: false
     }
 
     private fun ensureAlertChannel() {
