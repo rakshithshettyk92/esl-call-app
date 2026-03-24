@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.IntentFilter
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -12,15 +13,31 @@ import com.google.firebase.messaging.RemoteMessage
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val ALERT_CHANNEL_ID      = "esl_alert_channel"
-        const val ALERT_NOTIFICATION_ID = 1002
-        const val TAG = "FCMService"
+        const val ALERT_CHANNEL_ID        = "esl_alert_channel"
+        const val ALERT_NOTIFICATION_ID   = 1002
+        const val TAG                     = "FCMService"
+        const val ACTION_CANCEL_ALERT     = "com.eslcall.app.CANCEL_ALERT"
+        const val EXTRA_CANCEL_LABEL_CODE = "cancel_label_code"
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d(TAG, "FCM received from: ${remoteMessage.from}")
 
-        val data        = remoteMessage.data
+        val data = remoteMessage.data
+
+        // Cancel message — dismiss any open alert for this labelCode
+        if (data["type"] == "cancel") {
+            val labelCode = data["labelCode"] ?: ""
+            Log.d(TAG, "FCM cancel received for labelCode: $labelCode")
+            sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
+                putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
+            })
+            // Also cancel the tray notification
+            (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                .cancel(ALERT_NOTIFICATION_ID)
+            return
+        }
+
         val message     = data["message"]     ?: "Employee Call"
         val companyCode = data["companyCode"] ?: ""
         val labelCode   = data["labelCode"]   ?: ""

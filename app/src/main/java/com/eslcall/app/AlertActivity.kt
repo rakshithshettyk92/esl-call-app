@@ -1,6 +1,10 @@
 package com.eslcall.app
 
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
@@ -11,6 +15,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -32,6 +37,18 @@ class AlertActivity : AppCompatActivity() {
     }
 
     private var countDownTimer: CountDownTimer? = null
+    private var currentLabelCode: String = ""
+
+    // Receives the cancel broadcast from MyFirebaseMessagingService
+    private val cancelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val cancelLabel = intent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE) ?: ""
+            if (cancelLabel.isEmpty() || cancelLabel == currentLabelCode) {
+                countDownTimer?.cancel()
+                showAlreadyAcknowledged()
+            }
+        }
+    }
 
     private lateinit var btnOnMyWay:        Button
     private lateinit var btnDismiss:        Button
@@ -64,6 +81,14 @@ class AlertActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnClose).setOnClickListener { finish() }
         btnDismiss.setOnClickListener { finish() }
 
+        // Listen for cancel broadcasts from other devices acknowledging the same alert
+        ContextCompat.registerReceiver(
+            this,
+            cancelReceiver,
+            IntentFilter(MyFirebaseMessagingService.ACTION_CANCEL_ALERT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
         startCountdown()
     }
 
@@ -77,6 +102,7 @@ class AlertActivity : AppCompatActivity() {
         val message     = intent.getStringExtra(EXTRA_MESSAGE)      ?: "Employee Call"
         val companyCode = intent.getStringExtra(EXTRA_COMPANY_CODE) ?: ""
         val labelCode   = intent.getStringExtra(EXTRA_LABEL_CODE)   ?: ""
+        currentLabelCode = labelCode
 
         findViewById<TextView>(R.id.tvAlertMessage).text = message
 
@@ -125,7 +151,7 @@ class AlertActivity : AppCompatActivity() {
             .cancel(MyFirebaseMessagingService.ALERT_NOTIFICATION_ID)
 
         Thread {
-            val success = try {
+            try {
                 val body = JSONObject().apply {
                     put("companyCode", companyCode)
                     put("labelCode", labelCode)
@@ -138,30 +164,46 @@ class AlertActivity : AppCompatActivity() {
                     setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
                     doOutput = true
                     connectTimeout = 10_000
-                    readTimeout = 10_000
+                    readTimeout    = 10_000
                 }
                 OutputStreamWriter(conn.outputStream).use { it.write(body) }
-                conn.inputStream.bufferedReader().readText()
-                true
-            } catch (e: Exception) {
-                false
-            }
 
-            runOnUiThread {
-                if (success) {
-                    // Save to history
-                    AlertHistoryStore.save(
-                        this,
-                        AlertHistoryItem(
-                            message     = message,
-                            companyCode = companyCode,
-                            labelCode   = labelCode,
-                            timestamp   = System.currentTimeMillis()
-                        )
-                    )
-                    btnOnMyWay.text = "On My Way ✓"
-                    Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1_500)
-                } else {
+                val responseCode = conn.responseCode
+                val responseBody = if (responseCode < 400)
+                    conn.inputStream.bufferedReader().readText()
+                else
+                    conn.errorStream.bufferedReader().readText()
+
+                runOnUiThread {
+                    when (responseCode) {
+                        200 -> {
+                            AlertHistoryStore.save(
+                                this,
+                                AlertHistoryItem(
+                                    message     = message,
+                                    companyCode = companyCode,
+                                    labelCode   = labelCode,
+                                    timestamp   = System.currentTimeMillis()
+                                )
+                            )
+                            btnOnMyWay.text = "On My Way ✓"
+                            Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1_500)
+                        }
+                        409 -> {
+                            // Already acknowledged by another device
+                            showAlreadyAcknowledged()
+                        }
+                        else -> {
+                            btnOnMyWay.isEnabled = true
+                            btnOnMyWay.text      = "On My Way"
+                            btnDismiss.isEnabled = true
+                            startCountdown()
+                            Toast.makeText(this, "Could not reach server — try again", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
                     btnOnMyWay.isEnabled = true
                     btnOnMyWay.text      = "On My Way"
                     btnDismiss.isEnabled = true
@@ -172,8 +214,18 @@ class AlertActivity : AppCompatActivity() {
         }.start()
     }
 
+    private fun showAlreadyAcknowledged() {
+        countDownTimer?.cancel()
+        btnOnMyWay.isEnabled = false
+        btnOnMyWay.text      = "Already Acknowledged"
+        btnDismiss.isEnabled = true
+        tvAutoDismiss.text   = "Acknowledged by another device"
+        Handler(Looper.getMainLooper()).postDelayed({ finish() }, 2_500)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()
+        unregisterReceiver(cancelReceiver)
     }
 }
