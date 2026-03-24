@@ -80,6 +80,12 @@ class OnMyWayReceiver : BroadcastReceiver() {
                             status      = AlertStatus.ACKNOWLEDGED
                         ))
                     }
+                    // If no active calls remain, clear the ongoing grouped notification
+                    val remaining = AlertQueueStore.loadAll(context)
+                        .count { !AcknowledgedStore.isAcknowledged(context, it.labelCode) }
+                    if (remaining == 0) {
+                        nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+                    }
                     context.sendBroadcast(
                         Intent(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED)
                     )

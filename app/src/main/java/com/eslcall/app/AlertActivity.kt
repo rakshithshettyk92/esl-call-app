@@ -210,6 +210,7 @@ class AlertActivity : AppCompatActivity() {
         if (AlertQueueStore.size(this) > 0) {
             showNextFromQueue()
         } else {
+            cancelAllNotifications()
             finish()
         }
     }
@@ -305,6 +306,7 @@ class AlertActivity : AppCompatActivity() {
                                 if (AlertQueueStore.size(this) > 0) {
                                     showNextFromQueue()
                                 } else {
+                                    cancelAllNotifications()
                                     finish()
                                 }
                             }, 1_500)
@@ -314,7 +316,7 @@ class AlertActivity : AppCompatActivity() {
                             btnOnMyWay.isEnabled = true
                             btnOnMyWay.text      = "On My Way"
                             btnDismiss.isEnabled = true
-                            restartCountdown()
+                            restartCountdownand also all the notification generally in the actual phone ()
                             Toast.makeText(this, "Could not reach server — try again",
                                 Toast.LENGTH_SHORT).show()
                         }
@@ -373,11 +375,23 @@ class AlertActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
+    // Notification cleanup
+    // -------------------------------------------------------------------------
+
+    private fun cancelAllNotifications() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        // Cancel the individual alert notification
+        nm.cancel(currentNotifId)
+        // Cancel the ongoing grouped/status notification from the shade
+        nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+    }
+
+    // -------------------------------------------------------------------------
     // Ringtone — plays for up to 30 s or until the user acts
     // -------------------------------------------------------------------------
 
     private fun startRingtone() {
-        if (ringtone != null) return  // already ringing — preserve the original 30 s window
+        stopRingtone()  // don't stack multiple plays
         try {
             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ringtone = RingtoneManager.getRingtone(this, uri)?.also { rt ->
