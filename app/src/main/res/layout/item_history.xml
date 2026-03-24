@@ -7,30 +7,32 @@
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
 
-    <!-- Green check circle -->
+    <!-- Status icon circle -->
     <FrameLayout
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginEnd="14dp">
 
         <View
+            android:id="@+id/viewIconBg"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/shape_circle_green"
             android:alpha="0.15" />
 
         <TextView
+            android:id="@+id/tvStatusIcon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="✓"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/green" />
 
     </FrameLayout>
 
-    <!-- Message and time -->
+    <!-- Message and detail -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -49,7 +51,7 @@
             android:ellipsize="end" />
 
         <TextView
-            android:id="@+id/tvItemLabelCode"
+            android:id="@+id/tvItemStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text=""
@@ -71,7 +73,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text=""
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textColor="@color/text_secondary" />
 
         <TextView

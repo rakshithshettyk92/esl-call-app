@@ -9,9 +9,11 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -21,11 +23,14 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.UUID
 
 /**
  * Full-screen alert shown when an ESL button press is received.
- * - "On My Way" triggers ESL actions (page flip + LED) via the relay
- * - "Dismiss" closes the popup without triggering any actions
+ *
+ * Driven by AlertQueueStore — all incoming alerts are queued and shown
+ * one at a time. Dismissing / acknowledging the current alert automatically
+ * loads the next one. No alerts are silently lost.
  */
 class AlertActivity : AppCompatActivity() {
 
@@ -37,17 +42,26 @@ class AlertActivity : AppCompatActivity() {
         private const val AUTO_DISMISS_MS = 60_000L
     }
 
-    private var countDownTimer:      CountDownTimer? = null
-    private var currentLabelCode:    String = ""
-    private var currentNotificationId: Int  = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
+    private var countDownTimer:       CountDownTimer? = null
+    private var currentLabelCode:     String = ""
+    private var currentNotifId:       Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
 
-    // Receives the cancel broadcast — only acts if it matches our label
+    // Listens for cancel broadcasts (another device acknowledged, or banner On My Way)
     private val cancelReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val cancelLabel = intent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE) ?: ""
-            if (cancelLabel == currentLabelCode) {
-                countDownTimer?.cancel()
-                showAlreadyAcknowledged()
+            val cancelLabel = intent
+                ?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE) ?: ""
+            when {
+                cancelLabel == currentLabelCode -> {
+                    // Current alert was handled elsewhere
+                    countDownTimer?.cancel()
+                    showAlreadyAcknowledged()
+                }
+                cancelLabel.isNotBlank() -> {
+                    // A queued (not yet shown) alert was handled elsewhere — remove it
+                    AlertQueueStore.removeByLabelCode(this@AlertActivity, cancelLabel)
+                    updatePendingBadge()
+                }
             }
         }
     }
@@ -57,11 +71,12 @@ class AlertActivity : AppCompatActivity() {
     private lateinit var progressCountdown: CircularProgressIndicator
     private lateinit var tvCountdown:       TextView
     private lateinit var tvAutoDismiss:     TextView
+    private lateinit var layoutPendingBadge:LinearLayout
+    private lateinit var tvPendingCount:    TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Wake screen and show over lock screen
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
@@ -71,84 +86,133 @@ class AlertActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_alert)
 
-        btnOnMyWay        = findViewById(R.id.btnOnMyWay)
-        btnDismiss        = findViewById(R.id.btnDismiss)
-        progressCountdown = findViewById(R.id.progressCountdown)
-        tvCountdown       = findViewById(R.id.tvCountdown)
-        tvAutoDismiss     = findViewById(R.id.tvAutoDismiss)
+        btnOnMyWay         = findViewById(R.id.btnOnMyWay)
+        btnDismiss         = findViewById(R.id.btnDismiss)
+        progressCountdown  = findViewById(R.id.progressCountdown)
+        tvCountdown        = findViewById(R.id.tvCountdown)
+        tvAutoDismiss      = findViewById(R.id.tvAutoDismiss)
+        layoutPendingBadge = findViewById(R.id.layoutPendingBadge)
+        tvPendingCount     = findViewById(R.id.tvPendingCount)
 
-        applyIntent(intent)
+        findViewById<ImageButton>(R.id.btnClose).setOnClickListener {
+            dismissCurrent(AlertStatus.DISMISSED)
+        }
+        btnDismiss.setOnClickListener { dismissCurrent(AlertStatus.DISMISSED) }
 
-        // Both close button (top-right ✕) and Dismiss button close without any action
-        findViewById<ImageButton>(R.id.btnClose).setOnClickListener { finish() }
-        btnDismiss.setOnClickListener { finish() }
-
-        // Listen for cancel broadcasts from other devices acknowledging the same alert
         ContextCompat.registerReceiver(
-            this,
-            cancelReceiver,
+            this, cancelReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_CANCEL_ALERT),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        startCountdown()
+        showNextFromQueue()
     }
 
+    // onNewIntent is called when a second alert arrives while this activity is at the top.
+    // The new alert is already enqueued by MyFirebaseMessagingService — just update the badge.
     override fun onNewIntent(intent: android.content.Intent?) {
         super.onNewIntent(intent)
-        intent?.let { applyIntent(it) }
-        restartCountdown()
+        updatePendingBadge()
     }
 
-    private fun applyIntent(intent: android.content.Intent) {
-        val message     = intent.getStringExtra(EXTRA_MESSAGE)         ?: "Employee Call"
-        val companyCode = intent.getStringExtra(EXTRA_COMPANY_CODE)    ?: ""
-        val labelCode   = intent.getStringExtra(EXTRA_LABEL_CODE)      ?: ""
-        currentLabelCode     = labelCode
-        currentNotificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID,
-            MyFirebaseMessagingService.ALERT_NOTIFICATION_ID)
+    // -------------------------------------------------------------------------
+    // Queue-driven display
+    // -------------------------------------------------------------------------
 
-        // If already acknowledged (e.g. user tapped banner "On My Way" before opening)
-        if (AcknowledgedStore.isAcknowledged(this, labelCode)) {
-            showAlreadyAcknowledged()
+    private fun showNextFromQueue() {
+        val alert = AlertQueueStore.peek(this)
+        if (alert == null) {
+            finish()
             return
         }
 
-        findViewById<TextView>(R.id.tvAlertMessage).text = message
+        // Skip if already acknowledged (e.g. handled via banner on this device)
+        if (AcknowledgedStore.isAcknowledged(this, alert.labelCode)) {
+            AlertQueueStore.dequeue(this)
+            showNextFromQueue()
+            return
+        }
 
-        // Reset button state in case activity is reused
+        currentLabelCode = alert.labelCode
+        currentNotifId   = alert.notificationId
+
+        findViewById<TextView>(R.id.tvAlertMessage).text = alert.message
+
         btnOnMyWay.isEnabled = true
         btnOnMyWay.text      = "On My Way"
+        btnDismiss.isEnabled = true
 
         btnOnMyWay.setOnClickListener {
-            if (companyCode.isNotBlank() && labelCode.isNotBlank()) {
-                triggerAcknowledge(companyCode, labelCode, message)
+            if (alert.companyCode.isNotBlank() && alert.labelCode.isNotBlank()) {
+                triggerAcknowledge(alert.companyCode, alert.labelCode, alert.message)
             } else {
-                finish()
+                dismissCurrent(AlertStatus.DISMISSED)
             }
+        }
+
+        updatePendingBadge()
+        restartCountdown()
+    }
+
+    private fun dismissCurrent(status: AlertStatus) {
+        val alert = AlertQueueStore.dequeue(this)
+        if (alert != null) {
+            AlertHistoryStore.save(
+                this, AlertHistoryItem(
+                    message     = alert.message,
+                    companyCode = alert.companyCode,
+                    labelCode   = alert.labelCode,
+                    timestamp   = System.currentTimeMillis(),
+                    status      = status
+                )
+            )
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                .cancel(alert.notificationId)
+        }
+
+        countDownTimer?.cancel()
+
+        if (AlertQueueStore.size(this) > 0) {
+            showNextFromQueue()
+        } else {
+            finish()
         }
     }
 
-    private fun startCountdown() {
-        val totalMs = AUTO_DISMISS_MS
-        countDownTimer = object : CountDownTimer(totalMs, 1_000) {
+    private fun updatePendingBadge() {
+        val pending = AlertQueueStore.size(this) - 1   // minus the one currently shown
+        if (pending > 0) {
+            layoutPendingBadge.visibility = View.VISIBLE
+            tvPendingCount.text =
+                "⚡ $pending more alert${if (pending > 1) "s" else ""} waiting — handle this one first"
+        } else {
+            layoutPendingBadge.visibility = View.GONE
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Countdown timer
+    // -------------------------------------------------------------------------
+
+    private fun restartCountdown() {
+        countDownTimer?.cancel()
+        countDownTimer = object : CountDownTimer(AUTO_DISMISS_MS, 1_000) {
             override fun onTick(millisUntilFinished: Long) {
                 val secondsLeft = (millisUntilFinished / 1_000).toInt()
-                val progress    = (millisUntilFinished * 100 / totalMs).toInt()
-                tvCountdown.text       = secondsLeft.toString()
-                tvAutoDismiss.text     = "Auto-closing in ${secondsLeft}s"
+                val progress    = (millisUntilFinished * 100 / AUTO_DISMISS_MS).toInt()
+                tvCountdown.text           = secondsLeft.toString()
+                tvAutoDismiss.text         = "Auto-closing in ${secondsLeft}s"
                 progressCountdown.progress = progress
             }
             override fun onFinish() {
-                finish()
+                dismissCurrent(AlertStatus.MISSED)
             }
         }.start()
     }
 
-    private fun restartCountdown() {
-        countDownTimer?.cancel()
-        startCountdown()
-    }
+    // -------------------------------------------------------------------------
+    // On My Way — call relay
+    // -------------------------------------------------------------------------
 
     private fun triggerAcknowledge(companyCode: String, labelCode: String, message: String) {
         btnOnMyWay.isEnabled = false
@@ -156,15 +220,13 @@ class AlertActivity : AppCompatActivity() {
         btnDismiss.isEnabled = false
         countDownTimer?.cancel()
 
-        // Dismiss the tray notification for this specific label
-        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-            .cancel(currentNotificationId)
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancel(currentNotifId)
 
         Thread {
             try {
                 val body = JSONObject().apply {
                     put("companyCode", companyCode)
-                    put("labelCode", labelCode)
+                    put("labelCode",   labelCode)
                 }.toString()
 
                 val conn = (URL("${Constants.RELAY_URL}/esl/acknowledge")
@@ -172,44 +234,47 @@ class AlertActivity : AppCompatActivity() {
                     requestMethod = "POST"
                     setRequestProperty("Content-Type", "application/json")
                     setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
-                    doOutput = true
-                    connectTimeout = 10_000
-                    readTimeout    = 10_000
+                    doOutput        = true
+                    connectTimeout  = 10_000
+                    readTimeout     = 10_000
                 }
                 OutputStreamWriter(conn.outputStream).use { it.write(body) }
 
                 val responseCode = conn.responseCode
-                val responseBody = if (responseCode < 400)
-                    conn.inputStream.bufferedReader().readText()
-                else
-                    conn.errorStream.bufferedReader().readText()
+                if (responseCode < 400) conn.inputStream.bufferedReader().readText()
+                else conn.errorStream.bufferedReader().readText()
 
                 runOnUiThread {
                     when (responseCode) {
                         200 -> {
                             AcknowledgedStore.markAcknowledged(this, labelCode)
                             AlertHistoryStore.save(
-                                this,
-                                AlertHistoryItem(
+                                this, AlertHistoryItem(
                                     message     = message,
                                     companyCode = companyCode,
                                     labelCode   = labelCode,
-                                    timestamp   = System.currentTimeMillis()
+                                    timestamp   = System.currentTimeMillis(),
+                                    status      = AlertStatus.ACKNOWLEDGED
                                 )
                             )
+                            AlertQueueStore.dequeue(this)
                             btnOnMyWay.text = "On My Way ✓"
-                            Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1_500)
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                if (AlertQueueStore.size(this) > 0) {
+                                    showNextFromQueue()
+                                } else {
+                                    finish()
+                                }
+                            }, 1_500)
                         }
-                        409 -> {
-                            // Already acknowledged by another device
-                            showAlreadyAcknowledged()
-                        }
+                        409 -> showAlreadyAcknowledged()
                         else -> {
                             btnOnMyWay.isEnabled = true
                             btnOnMyWay.text      = "On My Way"
                             btnDismiss.isEnabled = true
-                            startCountdown()
-                            Toast.makeText(this, "Could not reach server — try again", Toast.LENGTH_SHORT).show()
+                            restartCountdown()
+                            Toast.makeText(this, "Could not reach server — try again",
+                                Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -218,25 +283,67 @@ class AlertActivity : AppCompatActivity() {
                     btnOnMyWay.isEnabled = true
                     btnOnMyWay.text      = "On My Way"
                     btnDismiss.isEnabled = true
-                    startCountdown()
-                    Toast.makeText(this, "Could not reach server — try again", Toast.LENGTH_SHORT).show()
+                    restartCountdown()
+                    Toast.makeText(this, "Could not reach server — try again",
+                        Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
     }
 
+    // -------------------------------------------------------------------------
+    // Already acknowledged (by another device or banner tap)
+    // -------------------------------------------------------------------------
+
     private fun showAlreadyAcknowledged() {
-        countDownTimer?.cancel()
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text      = "Already Acknowledged"
         btnDismiss.isEnabled = true
         tvAutoDismiss.text   = "Acknowledged by another device"
-        Handler(Looper.getMainLooper()).postDelayed({ finish() }, 2_500)
+        progressCountdown.progress = 0
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            // Remove from queue without saving to history (another device handled it)
+            AlertQueueStore.dequeue(this)
+            if (AlertQueueStore.size(this) > 0) {
+                showNextFromQueue()
+            } else {
+                finish()
+            }
+        }, 2_500)
     }
+
+    // -------------------------------------------------------------------------
+    // Back button = Dismiss
+    // -------------------------------------------------------------------------
+
+    @Deprecated("Overriding for dismiss behaviour")
+    override fun onBackPressed() {
+        dismissCurrent(AlertStatus.DISMISSED)
+    }
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
 
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()
         unregisterReceiver(cancelReceiver)
+
+        // Save any remaining queued alerts as MISSED (activity closed before user could act)
+        val remaining = AlertQueueStore.loadAll(this)
+        remaining.forEach { alert ->
+            AlertHistoryStore.save(
+                this, AlertHistoryItem(
+                    message     = alert.message,
+                    companyCode = alert.companyCode,
+                    labelCode   = alert.labelCode,
+                    timestamp   = System.currentTimeMillis(),
+                    status      = AlertStatus.MISSED
+                )
+            )
+        }
+        AlertQueueStore.clear(this)
     }
 }

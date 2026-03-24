@@ -8,7 +8,7 @@ object AlertHistoryStore {
 
     private const val PREFS_NAME  = "alert_history"
     private const val KEY_HISTORY = "history_json"
-    private const val MAX_ITEMS   = 50
+    private const val MAX_ITEMS   = 100
 
     fun save(context: Context, item: AlertHistoryItem) {
         val prefs    = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -20,6 +20,7 @@ object AlertHistoryStore {
             put("companyCode", item.companyCode)
             put("labelCode",   item.labelCode)
             put("timestamp",   item.timestamp)
+            put("status",      item.status.name)
         }
 
         // Insert newest first, cap at MAX_ITEMS
@@ -43,7 +44,10 @@ object AlertHistoryStore {
                 message     = obj.optString("message",     ""),
                 companyCode = obj.optString("companyCode", ""),
                 labelCode   = obj.optString("labelCode",   ""),
-                timestamp   = obj.optLong("timestamp",     0L)
+                timestamp   = obj.optLong("timestamp",     0L),
+                status      = runCatching {
+                    AlertStatus.valueOf(obj.optString("status", "ACKNOWLEDGED"))
+                }.getOrDefault(AlertStatus.ACKNOWLEDGED)
             )
         }
     }

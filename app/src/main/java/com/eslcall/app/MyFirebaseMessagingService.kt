@@ -29,14 +29,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             val labelCode = data["labelCode"] ?: ""
             Log.d(TAG, "FCM cancel received for labelCode: $labelCode")
 
-            // Mark acknowledged locally so AlertActivity shows correct state on open
+            // Mark acknowledged locally + remove from queue
             AcknowledgedStore.markAcknowledged(this, labelCode)
+            AlertQueueStore.removeByLabelCode(this, labelCode)
 
             // Dismiss the tray notification for this label
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(notificationIdFor(labelCode))
 
-            // Broadcast so any open AlertActivity for this label dismisses itself
+            // Broadcast so any open AlertActivity updates its display
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
                 putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
             })
@@ -95,10 +96,22 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .build()
 
+        // Enqueue the alert — AlertActivity reads from queue, not from intent data
+        AlertQueueStore.enqueue(
+            this, PendingAlert(
+                id             = java.util.UUID.randomUUID().toString(),
+                message        = message,
+                companyCode    = companyCode,
+                labelCode      = labelCode,
+                receivedAt     = System.currentTimeMillis(),
+                notificationId = notifId
+            )
+        )
+
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(notifId, notification)
 
-        // Also launch AlertActivity directly when screen is on
+        // Launch AlertActivity — if already open (singleTop) onNewIntent fires to update badge
         startActivity(alertIntent)
     }
 

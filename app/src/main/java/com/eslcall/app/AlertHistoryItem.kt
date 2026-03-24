@@ -3,23 +3,24 @@ package com.eslcall.app
 import java.text.SimpleDateFormat
 import java.util.*
 
+enum class AlertStatus { ACKNOWLEDGED, DISMISSED, MISSED }
+
 data class AlertHistoryItem(
     val message:     String,
     val companyCode: String,
     val labelCode:   String,
-    val timestamp:   Long
+    val timestamp:   Long,
+    val status:      AlertStatus = AlertStatus.ACKNOWLEDGED
 ) {
-    fun formattedTime(): String {
-        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-        return sdf.format(Date(timestamp))
-    }
+    fun formattedTimeOnly(): String =
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
 
     fun relativeDay(): String {
-        val now      = Calendar.getInstance()
-        val itemCal  = Calendar.getInstance().also { it.timeInMillis = timestamp }
+        val now     = Calendar.getInstance()
+        val itemCal = Calendar.getInstance().also { it.timeInMillis = timestamp }
         return when {
-            isSameDay(now, itemCal)                  -> "Today"
-            isYesterday(now, itemCal)                -> "Yesterday"
+            isSameDay(now, itemCal)    -> "Today"
+            isYesterday(now, itemCal)  -> "Yesterday"
             else -> SimpleDateFormat("EEE, dd MMM", Locale.getDefault()).format(Date(timestamp))
         }
     }
@@ -35,7 +36,4 @@ data class AlertHistoryItem(
         }
         return isSameDay(yesterday, item)
     }
-
-    fun formattedTimeOnly(): String =
-        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
 }
