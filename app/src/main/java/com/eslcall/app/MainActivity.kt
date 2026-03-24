@@ -255,16 +255,9 @@ class MainActivity : AppCompatActivity() {
         val scaleY = ObjectAnimator.ofFloat(viewPulseRing, "scaleY", 1f, 2f)
         val alpha  = ObjectAnimator.ofFloat(viewPulseRing, "alpha", 0.6f, 0f)
 
-        pulseAnimator = AnimatorSet().apply {
-            playTogether(scaleX, scaleY, alpha)
-            duration       = 1_200
-            interpolator   = AccelerateDecelerateInterpolator()
-            repeatCount    // set on individual animators below
-        }
-
         listOf(scaleX, scaleY, alpha).forEach {
-            it.repeatCount = ObjectAnimator.INFINITE
-            it.duration    = 1_200
+            it.repeatCount  = ObjectAnimator.INFINITE
+            it.duration     = 1_200
             it.interpolator = AccelerateDecelerateInterpolator()
         }
 
