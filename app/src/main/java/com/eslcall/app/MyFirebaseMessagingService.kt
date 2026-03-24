@@ -67,7 +67,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             )
         )
 
-        val queueSize = AlertQueueStore.size(this)
+        val queueSize   = AlertQueueStore.size(this)
+        val appForeground = isAppForeground()
 
         // Notify MainActivity / ActiveCallsActivity to refresh
         sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
@@ -87,35 +88,38 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 this, notifId, alertIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val onMyWayIntent = Intent(this, OnMyWayReceiver::class.java).apply {
-                action = OnMyWayReceiver.ACTION_ON_MY_WAY
-                putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
-                putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
-            }
-            val onMyWayPI = PendingIntent.getBroadcast(
-                this, notifId, onMyWayIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+            val builder = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(0xFF001C3D.toInt())
                 .setContentTitle("Employee Call")
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setFullScreenIntent(fullScreenPI, true)
                 .setContentIntent(fullScreenPI)
-                .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
                 .setNumber(1)
                 .setAutoCancel(true)
-                .build()
-            nm.notify(notifId, notification)
+            if (appForeground) {
+                // App is visible — activity launched directly, no banner needed
+                builder.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            } else {
+                val onMyWayIntent = Intent(this, OnMyWayReceiver::class.java).apply {
+                    action = OnMyWayReceiver.ACTION_ON_MY_WAY
+                    putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
+                    putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
+                }
+                val onMyWayPI = PendingIntent.getBroadcast(
+                    this, notifId, onMyWayIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setFullScreenIntent(fullScreenPI, true)
+                    .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
+            }
+            nm.notify(notifId, builder.build())
             startActivity(alertIntent)
 
         } else {
             // ── Multiple alerts: cancel all individuals, show grouped ──────────
-            // Cancel individual notifications for every queued alert
             AlertQueueStore.loadAll(this).forEach { nm.cancel(it.notificationId) }
 
             val allAlerts  = AlertQueueStore.loadAll(this)
@@ -136,7 +140,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 .setContentTitle("$queueSize Active Employee Calls")
                 .setContentText("Tap to view and respond")
                 .setStyle(inboxStyle)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
+                // No heads-up banner when user is already looking at the list
+                .setPriority(if (appForeground) NotificationCompat.PRIORITY_DEFAULT
+                             else NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(activeCallsPI)
                 .setNumber(queueSize)
@@ -148,6 +154,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             // Tell AlertActivity (if open) to transition to the list screen
             sendBroadcast(Intent(ACTION_SWITCH_TO_LIST))
         }
+    }
+
+    private fun isAppForeground(): Boolean {
+        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+        return am.runningAppProcesses?.any {
+            it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                    it.processName == packageName
+        } ?: false
     }
 
     private fun ensureAlertChannel() {

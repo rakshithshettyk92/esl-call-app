@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -33,6 +35,28 @@ class ActiveCallsActivity : AppCompatActivity() {
     private lateinit var adapter:       ActiveCallsAdapter
 
     private val nm get() = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+    private val tickHandler  = Handler(Looper.getMainLooper())
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            val expired = adapter.tick()
+            if (expired.isNotEmpty()) {
+                expired.forEach { alert ->
+                    AlertHistoryStore.save(this@ActiveCallsActivity, AlertHistoryItem(
+                        message     = alert.message,
+                        companyCode = alert.companyCode,
+                        labelCode   = alert.labelCode,
+                        timestamp   = System.currentTimeMillis(),
+                        status      = AlertStatus.MISSED
+                    ))
+                    AlertQueueStore.removeByLabelCode(this@ActiveCallsActivity, alert.labelCode)
+                    nm.cancel(alert.notificationId)
+                }
+                refreshList()
+            }
+            tickHandler.postDelayed(this, 1_000)
+        }
+    }
 
     // Refresh when new alert arrives or one is cancelled
     private val refreshReceiver = object : BroadcastReceiver() {
@@ -81,10 +105,12 @@ class ActiveCallsActivity : AppCompatActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         refreshList()
+        tickHandler.post(tickRunnable)
     }
 
     override fun onPause() {
         super.onPause()
+        tickHandler.removeCallbacks(tickRunnable)
         unregisterReceiver(refreshReceiver)
         unregisterReceiver(cancelReceiver)
     }
@@ -94,6 +120,23 @@ class ActiveCallsActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun refreshList() {
+        // Expire any alerts whose 60-second window has already passed
+        val now = System.currentTimeMillis()
+        AlertQueueStore.loadAll(this)
+            .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
+            .filter  { (now - it.receivedAt) >= Constants.ALERT_TIMEOUT_MS }
+            .forEach { alert ->
+                AlertHistoryStore.save(this, AlertHistoryItem(
+                    message     = alert.message,
+                    companyCode = alert.companyCode,
+                    labelCode   = alert.labelCode,
+                    timestamp   = now,
+                    status      = AlertStatus.MISSED
+                ))
+                AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+                nm.cancel(alert.notificationId)
+            }
+
         val alerts = AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
 

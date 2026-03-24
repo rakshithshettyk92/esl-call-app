@@ -39,7 +39,7 @@ class AlertActivity : AppCompatActivity() {
         const val EXTRA_COMPANY_CODE    = "extra_company_code"
         const val EXTRA_LABEL_CODE      = "extra_label_code"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
-        private const val AUTO_DISMISS_MS = 60_000L
+        private val AUTO_DISMISS_MS = Constants.ALERT_TIMEOUT_MS
     }
 
     private var countDownTimer:         CountDownTimer? = null
