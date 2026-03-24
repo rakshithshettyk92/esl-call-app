@@ -174,8 +174,9 @@ class ActiveCallsActivity : AppCompatActivity() {
             .setContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
             .setContentText("Tap to view and respond")
             .setStyle(style)
-            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
-            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+            // Low priority — user is already on this screen, no heads-up banner needed.
+            // The notification stays in the shade to maintain the app icon badge count.
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pi)
             .setNumber(count)
             .setAutoCancel(false)
