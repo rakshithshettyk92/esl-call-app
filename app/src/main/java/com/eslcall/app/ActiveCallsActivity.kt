@@ -57,7 +57,7 @@ class ActiveCallsActivity : AppCompatActivity() {
         layoutEmpty = findViewById(R.id.layoutActiveEmpty)
         recycler    = findViewById(R.id.recyclerActiveCalls)
 
-        findViewById<ImageButton>(R.id.btnBackActiveCalls).setOnClickListener { finish() }
+        findViewById<ImageButton>(R.id.btnBackActiveCalls).setOnClickListener { navigateToMain() }
 
         adapter = ActiveCallsAdapter(
             items        = emptyList(),
@@ -101,9 +101,8 @@ class ActiveCallsActivity : AppCompatActivity() {
         else "${alerts.size} call${if (alerts.size > 1) "s" else ""} waiting for response"
 
         if (alerts.isEmpty()) {
-            recycler.visibility    = View.GONE
-            layoutEmpty.visibility = View.VISIBLE
             nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+            navigateToMain()
         } else {
             recycler.visibility    = View.VISIBLE
             layoutEmpty.visibility = View.GONE
@@ -203,6 +202,20 @@ class ActiveCallsActivity : AppCompatActivity() {
             }
         }.start()
     }
+
+    // -------------------------------------------------------------------------
+    // Navigation — always go home, clearing any stale AlertActivity from stack
+    // -------------------------------------------------------------------------
+
+    private fun navigateToMain() {
+        startActivity(Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        })
+        finish()
+    }
+
+    @Deprecated("Overriding for back behaviour")
+    override fun onBackPressed() = navigateToMain()
 
     // -------------------------------------------------------------------------
     // Dismiss
