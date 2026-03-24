@@ -107,9 +107,7 @@ class AlertActivity : AppCompatActivity() {
         layoutPendingBadge = findViewById(R.id.layoutPendingBadge)
         tvPendingCount     = findViewById(R.id.tvPendingCount)
 
-        findViewById<ImageButton>(R.id.btnClose).setOnClickListener {
-            dismissCurrent(AlertStatus.DISMISSED)
-        }
+        findViewById<ImageButton>(R.id.btnClose).setOnClickListener { navigateToMain() }
         btnDismiss.setOnClickListener { dismissCurrent(AlertStatus.DISMISSED) }
 
         ContextCompat.registerReceiver(
@@ -341,12 +339,19 @@ class AlertActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Back button = Dismiss
+    // Back button = go home (keep alert in queue)
     // -------------------------------------------------------------------------
 
-    @Deprecated("Overriding for dismiss behaviour")
+    @Deprecated("Overriding for back behaviour")
     override fun onBackPressed() {
-        dismissCurrent(AlertStatus.DISMISSED)
+        navigateToMain()
+    }
+
+    private fun navigateToMain() {
+        startActivity(Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        })
+        finish()
     }
 
     // -------------------------------------------------------------------------
