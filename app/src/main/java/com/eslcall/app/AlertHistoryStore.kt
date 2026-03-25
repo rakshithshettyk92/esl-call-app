@@ -33,7 +33,11 @@ object AlertHistoryStore {
         prefs.edit().putString(KEY_HISTORY, newArray.toString()).apply()
     }
 
-    /** Remove all history entries matching labelCode (e.g. after FCM cancel from another device). */
+    /**
+     * Remove history entries for labelCode that are NOT yet acknowledged.
+     * Called when a cancel FCM arrives — if this device already saved an ACKNOWLEDGED
+     * entry (i.e. it was the one that tapped On My Way), keep it in history.
+     */
     fun removeByLabelCode(context: Context, labelCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json  = prefs.getString(KEY_HISTORY, "[]") ?: "[]"
@@ -41,7 +45,9 @@ object AlertHistoryStore {
         val kept  = JSONArray()
         for (i in 0 until array.length()) {
             val obj = array.getJSONObject(i)
-            if (obj.optString("labelCode") != labelCode) kept.put(obj)
+            val sameLabel = obj.optString("labelCode") == labelCode
+            val isAcknowledged = obj.optString("status") == AlertStatus.ACKNOWLEDGED.name
+            if (!sameLabel || isAcknowledged) kept.put(obj)
         }
         prefs.edit().putString(KEY_HISTORY, kept.toString()).apply()
     }

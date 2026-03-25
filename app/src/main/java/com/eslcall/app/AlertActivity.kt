@@ -316,7 +316,7 @@ class AlertActivity : AppCompatActivity() {
                             btnOnMyWay.isEnabled = true
                             btnOnMyWay.text      = "On My Way"
                             btnDismiss.isEnabled = true
-                            restartCountdownand also all the notification generally in the actual phone ()
+                            restartCountdown()
                             Toast.makeText(this, "Could not reach server — try again",
                                 Toast.LENGTH_SHORT).show()
                         }
@@ -340,10 +340,11 @@ class AlertActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun showAlreadyAcknowledged() {
+        stopRingtone()
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text      = "Already Acknowledged"
-        btnDismiss.isEnabled = true
-        tvAutoDismiss.text   = "Acknowledged by another device"
+        btnDismiss.isEnabled = false
+        tvAutoDismiss.text   = "Acknowledged by another device — closing…"
         progressCountdown.progress = 0
 
         Handler(Looper.getMainLooper()).postDelayed({
@@ -354,7 +355,7 @@ class AlertActivity : AppCompatActivity() {
             } else {
                 finish()
             }
-        }, 2_500)
+        }, 1_500)
     }
 
     // -------------------------------------------------------------------------

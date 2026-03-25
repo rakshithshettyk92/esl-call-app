@@ -10,11 +10,16 @@ import android.content.Context
 object AcknowledgedStore {
 
     private const val PREFS = "acked_labels"
-    private const val TTL   = 5 * 60 * 1000L // 5 minutes — same as relay TTL
+    private const val TTL   = 1 * 60 * 1000L // 1 minute (testing) — same as relay TTL
 
     fun markAcknowledged(context: Context, labelCode: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putLong(labelCode, System.currentTimeMillis()).apply()
+    }
+
+    fun clear(context: Context, labelCode: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().remove(labelCode).apply()
     }
 
     fun isAcknowledged(context: Context, labelCode: String): Boolean {

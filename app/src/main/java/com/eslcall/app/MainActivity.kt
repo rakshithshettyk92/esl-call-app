@@ -76,7 +76,10 @@ class MainActivity : AppCompatActivity() {
     private var activeCallsAnimator: AnimatorSet? = null
 
     private val activeListReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) = refreshActiveCalls()
+        override fun onReceive(context: Context?, intent: Intent?) {
+            refreshActiveCalls()
+            refreshLastAlert()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -290,6 +293,24 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun refreshActiveCalls() {
+        // Purge alerts whose timeout window has already passed
+        val now = System.currentTimeMillis()
+        AlertQueueStore.loadAll(this)
+            .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
+            .filter { (now - it.receivedAt) >= Constants.ALERT_TIMEOUT_MS }
+            .forEach { alert ->
+                AlertHistoryStore.save(this, AlertHistoryItem(
+                    message     = alert.message,
+                    companyCode = alert.companyCode,
+                    labelCode   = alert.labelCode,
+                    timestamp   = now,
+                    status      = AlertStatus.MISSED
+                ))
+                AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+                (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                    .cancel(alert.notificationId)
+            }
+
         val count = AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
             .size

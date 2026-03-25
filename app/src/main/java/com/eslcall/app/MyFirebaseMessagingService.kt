@@ -44,9 +44,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        val message     = data["message"]     ?: "Employee Call"
+        val message     = data["message"]     ?: "Customer help needed"
         val companyCode = data["companyCode"] ?: ""
         val labelCode   = data["labelCode"]   ?: ""
+        // New button press — clear any stale acknowledgement so the alert shows fresh
+        if (labelCode.isNotBlank()) AcknowledgedStore.clear(this, labelCode)
         triggerAlert(message, companyCode, labelCode)
     }
 
