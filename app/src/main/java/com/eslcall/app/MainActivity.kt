@@ -105,8 +105,19 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, StoreSelectionActivity::class.java))
         }
         btnTestAlert.setOnClickListener {
+            // AlertActivity is queue-driven; the bare EXTRA_MESSAGE intent
+            // would just be ignored. Enqueue a fake alert and let the normal
+            // pipeline render it. Blank company/label means "On My Way" will
+            // dismiss locally without calling the relay.
+            AlertQueueStore.enqueue(this, PendingAlert(
+                id             = java.util.UUID.randomUUID().toString(),
+                message        = "Test — Shelf A3, Aisle 2",
+                companyCode    = "",
+                labelCode      = "",
+                receivedAt     = System.currentTimeMillis(),
+                notificationId = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID,
+            ))
             startActivity(Intent(this, AlertActivity::class.java).apply {
-                putExtra(AlertActivity.EXTRA_MESSAGE, "Test — Shelf A3, Aisle 2")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             })
         }
