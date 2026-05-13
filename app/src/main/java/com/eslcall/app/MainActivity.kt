@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnAdmin:              Button
     private lateinit var btnSwitchStore:        Button
     private lateinit var tvCurrentStore:        TextView
+    private lateinit var layoutSetupBanner:     LinearLayout
+    private lateinit var btnSetupBannerConfigure: Button
     private lateinit var layoutActiveCalls:    LinearLayout
     private lateinit var tvActiveCallsCount:   TextView
     private lateinit var tvActiveCountStatus:  TextView
@@ -98,6 +100,9 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ActiveCallsActivity::class.java))
         }
         btnAdmin.setOnClickListener {
+            startActivity(Intent(this, FieldMappingActivity::class.java))
+        }
+        btnSetupBannerConfigure.setOnClickListener {
             startActivity(Intent(this, FieldMappingActivity::class.java))
         }
         btnSwitchStore.setOnClickListener {
@@ -314,6 +319,35 @@ class MainActivity : AppCompatActivity() {
         startPulse()
         refreshLastAlert()
         refreshActiveCalls()
+        refreshSetupBanner()
+    }
+
+    /**
+     * Checks with the relay whether this store has an explicit field mapping
+     * saved. If not, shows a banner nudging the user to configure it — otherwise
+     * Solum's article fetch will use built-in defaults that may not match the
+     * company's actual schema (and the help-enabled filter would drop everything).
+     */
+    private fun refreshSetupBanner() {
+        val co    = Session.companyCode(this).orEmpty()
+        val store = Session.storeCode(this).orEmpty()
+        if (co.isEmpty() || store.isEmpty()) {
+            layoutSetupBanner.visibility = View.GONE
+            return
+        }
+        Thread {
+            val saved = try {
+                val json = RelayApi.get(Constants.PATH_ADMIN_FIELD_MAPPING,
+                    mapOf("company" to co, "store" to store))
+                json.optBoolean("saved", false)
+            } catch (_: Exception) {
+                // Network/relay failure — don't false-alarm. Assume configured.
+                true
+            }
+            runOnUiThread {
+                layoutSetupBanner.visibility = if (saved) View.GONE else View.VISIBLE
+            }
+        }.start()
     }
 
     private fun showLoginError(message: String) {
@@ -479,6 +513,8 @@ class MainActivity : AppCompatActivity() {
         btnAdmin             = findViewById(R.id.btnAdmin)
         btnSwitchStore       = findViewById(R.id.btnSwitchStore)
         tvCurrentStore       = findViewById(R.id.tvCurrentStore)
+        layoutSetupBanner    = findViewById(R.id.layoutSetupBanner)
+        btnSetupBannerConfigure = findViewById(R.id.btnSetupBannerConfigure)
     }
 
     private fun postToRelay(path: String, body: String): JSONObject {

@@ -312,6 +312,58 @@
 
                     </LinearLayout>
 
+                    <!-- Setup banner: shown when no field mapping has been saved for this store -->
+                    <LinearLayout
+                        android:id="@+id/layoutSetupBanner"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="#FFF6C9"
+                        android:padding="14dp"
+                        android:layout_marginTop="14dp"
+                        android:layout_marginBottom="2dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Setup required"
+                                android:textStyle="bold"
+                                android:textSize="13sp"
+                                android:textColor="@color/text_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Configure product fields for this store to start receiving alerts."
+                                android:textSize="12sp"
+                                android:textColor="@color/text_primary"
+                                android:layout_marginTop="2dp" />
+
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/btnSetupBannerConfigure"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="36dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="Configure"
+                            android:textSize="12sp"
+                            android:backgroundTint="@color/primary"
+                            android:textColor="@color/white" />
+
+                    </LinearLayout>
+
                     <!-- Last alert section (hidden until first alert) -->
                     <LinearLayout
                         android:id="@+id/layoutLastAlert"
