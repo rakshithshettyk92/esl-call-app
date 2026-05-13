@@ -85,6 +85,18 @@
             android:theme="@style/Theme.ESLCallApp.History"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Admin landing with cards routing to field mapping + analytics -->
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History" />
+
+        <!-- Analytics dashboard for the current store -->
+        <activity
+            android:name=".AnalyticsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History" />
+
         <!-- Re-subscribe to FCM topic after reboot -->
         <receiver
             android:name=".BootReceiver"

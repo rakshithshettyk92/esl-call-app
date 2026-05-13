@@ -31,6 +31,16 @@ object AlertHistoryStore {
         }
 
         prefs.edit().putString(KEY_HISTORY, newArray.toString()).apply()
+
+        // Tell the relay about terminal outcomes it never sees on its own.
+        // Acknowledged is already known via /esl/acknowledge.
+        when (item.status) {
+            AlertStatus.MISSED    -> RelayApi.reportStatusAsync(
+                item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "missed")
+            AlertStatus.DISMISSED -> RelayApi.reportStatusAsync(
+                item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "dismissed")
+            else -> {}
+        }
     }
 
     /**

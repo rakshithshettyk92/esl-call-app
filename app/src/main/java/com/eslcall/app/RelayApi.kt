@@ -82,6 +82,25 @@ object RelayApi {
         )
     }
 
+    /**
+     * Fire-and-forget report of a missed/dismissed alert so the relay's
+     * analytics can record outcomes it never saw on its own. Runs on a
+     * background thread; swallows all errors — never blocks the caller.
+     */
+    fun reportStatusAsync(companyCode: String, storeCode: String, labelCode: String, status: String) {
+        if (companyCode.isBlank() || storeCode.isBlank() || labelCode.isBlank()) return
+        Thread {
+            try {
+                postJson(Constants.PATH_ESL_STATUS, JSONObject().apply {
+                    put("companyCode", companyCode)
+                    put("storeCode",   storeCode)
+                    put("labelCode",   labelCode)
+                    put("status",      status)
+                })
+            } catch (_: Exception) { /* best-effort */ }
+        }.start()
+    }
+
     fun saveFieldMapping(company: String, store: String, mapping: CallFieldMapping) {
         val body = JSONObject().apply {
             put("company", company)
@@ -100,6 +119,10 @@ object RelayApi {
             throw RuntimeException("Save failed: ${json.optString("error", "unknown")}")
         }
     }
+
+    /** Raw analytics JSON for AnalyticsActivity to render. */
+    fun fetchAnalytics(company: String, store: String, range: String): JSONObject =
+        get(Constants.PATH_ADMIN_ANALYTICS, mapOf("company" to company, "store" to store, "range" to range))
 
     private fun buildUrl(path: String, query: Map<String, String>): String {
         val base = Constants.RELAY_URL + path

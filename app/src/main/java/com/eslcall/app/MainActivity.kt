@@ -100,9 +100,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ActiveCallsActivity::class.java))
         }
         btnAdmin.setOnClickListener {
-            startActivity(Intent(this, FieldMappingActivity::class.java))
+            startActivity(Intent(this, AdminActivity::class.java))
         }
         btnSetupBannerConfigure.setOnClickListener {
+            // Setup nudge jumps directly to field config (fewer taps when the
+            // user is being prompted to do exactly that one thing).
             startActivity(Intent(this, FieldMappingActivity::class.java))
         }
         btnSwitchStore.setOnClickListener {
