@@ -73,11 +73,12 @@ object RelayApi {
         val json = get(Constants.PATH_ADMIN_FIELD_MAPPING, mapOf("company" to company, "store" to store))
         val m    = json.optJSONObject("mapping") ?: return CallFieldMapping.DEFAULT
         return CallFieldMapping(
-            articleIdField   = m.optString("articleIdField",   "ARTICLE_ID"),
-            articleNameField = m.optString("articleNameField", "ITEM_NAME"),
-            helpEnabledField = m.optString("helpEnabledField", "ASSOCIATE_HELP_ENABLED"),
-            helpEnabledValue = m.optString("helpEnabledValue", "Y"),
-            aisleField       = m.optString("aisleField").takeIf { it.isNotBlank() && it != "null" },
+            articleIdField     = m.optString("articleIdField",   "ARTICLE_ID"),
+            articleNameField   = m.optString("articleNameField", "ITEM_NAME"),
+            helpEnabledField   = m.optString("helpEnabledField", "ASSOCIATE_HELP_ENABLED"),
+            helpEnabledValue   = m.optString("helpEnabledValue", "Y"),
+            aisleField         = m.optString("aisleField").takeIf { it.isNotBlank() && it != "null" },
+            revertDelaySeconds = m.optInt("revertDelaySeconds", 60),
         )
     }
 
@@ -86,11 +87,12 @@ object RelayApi {
             put("company", company)
             put("store",   store)
             put("mapping", JSONObject().apply {
-                put("articleIdField",   mapping.articleIdField)
-                put("articleNameField", mapping.articleNameField)
-                put("helpEnabledField", mapping.helpEnabledField)
-                put("helpEnabledValue", mapping.helpEnabledValue)
-                put("aisleField",       mapping.aisleField ?: "")
+                put("articleIdField",     mapping.articleIdField)
+                put("articleNameField",   mapping.articleNameField)
+                put("helpEnabledField",   mapping.helpEnabledField)
+                put("helpEnabledValue",   mapping.helpEnabledValue)
+                put("aisleField",         mapping.aisleField ?: "")
+                put("revertDelaySeconds", mapping.revertDelaySeconds)
             })
         }
         val json = postJson(Constants.PATH_ADMIN_FIELD_MAPPING, body)

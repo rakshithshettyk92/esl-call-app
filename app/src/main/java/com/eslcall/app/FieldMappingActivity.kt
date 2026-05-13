@@ -29,6 +29,7 @@ class FieldMappingActivity : AppCompatActivity() {
     private lateinit var helpEnabledFieldInput:MaterialAutoCompleteTextView
     private lateinit var helpEnabledValueInput:TextInputEditText
     private lateinit var aisleInput:           MaterialAutoCompleteTextView
+    private lateinit var revertDelayInput:     TextInputEditText
     private lateinit var tvError:              TextView
     private lateinit var btnSave:              Button
 
@@ -49,6 +50,7 @@ class FieldMappingActivity : AppCompatActivity() {
         helpEnabledFieldInput = findViewById(R.id.helpEnabledFieldInput)
         helpEnabledValueInput = findViewById(R.id.helpEnabledValueInput)
         aisleInput            = findViewById(R.id.aisleInput)
+        revertDelayInput      = findViewById(R.id.revertDelayInput)
         tvError               = findViewById(R.id.tvError)
         btnSave               = findViewById(R.id.btnSave)
 
@@ -72,6 +74,7 @@ class FieldMappingActivity : AppCompatActivity() {
             it.addTextChangedListener(watcher)
         }
         helpEnabledValueInput.addTextChangedListener(watcher)
+        revertDelayInput.addTextChangedListener(watcher)
 
         loadConfig()
     }
@@ -116,15 +119,17 @@ class FieldMappingActivity : AppCompatActivity() {
         helpEnabledFieldInput.setText(m.helpEnabledField, false)
         helpEnabledValueInput.setText(m.helpEnabledValue)
         aisleInput.setText(m.aisleField.orEmpty(), false)
+        revertDelayInput.setText(m.revertDelaySeconds.toString())
     }
 
     private fun current(): CallFieldMapping = CallFieldMapping(
-        articleIdField   = articleIdInput.text.toString().trim(),
-        articleNameField = articleNameInput.text.toString().trim(),
-        helpEnabledField = helpEnabledFieldInput.text.toString().trim(),
-        helpEnabledValue = helpEnabledValueInput.text.toString().trim(),
-        aisleField       = aisleInput.text.toString().trim().takeIf { it.isNotBlank() },
-        allColumns       = columns,
+        articleIdField     = articleIdInput.text.toString().trim(),
+        articleNameField   = articleNameInput.text.toString().trim(),
+        helpEnabledField   = helpEnabledFieldInput.text.toString().trim(),
+        helpEnabledValue   = helpEnabledValueInput.text.toString().trim(),
+        aisleField         = aisleInput.text.toString().trim().takeIf { it.isNotBlank() },
+        revertDelaySeconds = revertDelayInput.text.toString().trim().toIntOrNull() ?: 60,
+        allColumns         = columns,
     )
 
     private fun save() {
