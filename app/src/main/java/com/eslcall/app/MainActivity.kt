@@ -137,17 +137,24 @@ class MainActivity : AppCompatActivity() {
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-        // Returning from a child screen: if the user cleared their store via the
-        // picker (e.g. Switch Store), force them back to the picker. Otherwise
-        // refresh active calls / last alert / store label.
-        if (Session.username(this) != null && !Session.hasStoreSelected(this)) {
-            startActivity(Intent(this, StoreSelectionActivity::class.java))
-            return
-        }
-        if (layoutReady.visibility == View.VISIBLE) {
-            Session.username(this)?.let { showReadyState(it) }
-            refreshLastAlert()
-            refreshActiveCalls()
+        // Apply UI state from Session. Done in onResume (not just onCreate) so
+        // returning from the store picker swaps the login layout for the ready
+        // screen even when we never finished MainActivity.
+        val user = Session.username(this)
+        when {
+            user != null && Session.hasStoreSelected(this) -> {
+                Session.resubscribeCurrentTopic(this)
+                showReadyState(user)
+            }
+            user != null -> {
+                // Logged in but no store picked yet — force the picker.
+                startActivity(Intent(this, StoreSelectionActivity::class.java))
+            }
+            else -> {
+                // Signed out (could be a fresh start or returning from store picker
+                // after backing out). Make sure the login layout is the visible one.
+                showLoginState()
+            }
         }
     }
 

@@ -52,7 +52,23 @@ class StoreSelectionActivity : AppCompatActivity() {
         // Pre-fill if we already had a company saved (e.g. user is switching stores).
         Session.companyCode(this)?.let { etCompany.setText(it) }
 
-        toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        // Back from this screen without picking a store = log out, otherwise
+        // MainActivity.onResume would just push the user back here (loop).
+        val exitWithLogout = Runnable {
+            Session.clear(this)
+            // Wake up any /auth/logout side effects best-effort; ignore failures.
+            Thread {
+                try { RelayApi.postJson(Constants.PATH_AUTH_LOGOUT, org.json.JSONObject()) }
+                catch (_: Exception) {}
+            }.start()
+            finish()
+        }
+        toolbar.setNavigationOnClickListener { exitWithLogout.run() }
+        onBackPressedDispatcher.addCallback(this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() { exitWithLogout.run() }
+            })
+
         btnLoadStores.setOnClickListener { loadStores() }
         btnContinue.setOnClickListener   { onContinue() }
 
