@@ -25,7 +25,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.android.material.progressindicator.CircularProgressIndicator
-import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -35,11 +34,8 @@ import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        private const val FCM_TOPIC     = "employee-calls"
-        private const val PREFS_NAME    = "esl_prefs"
-        private const val PREF_USERNAME = "logged_in_user"
-    }
+    // Username + company/store live in Session (see Session.kt). FCM topic
+    // subscription is handled there too — the relay routes per-store now.
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -66,6 +62,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnHistory:            Button
     private lateinit var btnTestAlert:          Button
     private lateinit var btnLogout:             Button
+    private lateinit var btnAdmin:              Button
+    private lateinit var btnSwitchStore:        Button
+    private lateinit var tvCurrentStore:        TextView
     private lateinit var layoutActiveCalls:    LinearLayout
     private lateinit var tvActiveCallsCount:   TextView
     private lateinit var tvActiveCountStatus:  TextView
@@ -89,15 +88,21 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         askNotificationPermission()
-        subscribeToFcmTopic()
 
-        btnLogin.setOnClickListener { attemptLogin() }
+        btnLogin.setOnClickListener  { attemptLogin() }
         btnLogout.setOnClickListener { attemptLogout() }
         btnHistory.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
         btnRespondNow.setOnClickListener {
             startActivity(Intent(this, ActiveCallsActivity::class.java))
+        }
+        btnAdmin.setOnClickListener {
+            startActivity(Intent(this, FieldMappingActivity::class.java))
+        }
+        btnSwitchStore.setOnClickListener {
+            Session.clearStore(this)
+            startActivity(Intent(this, StoreSelectionActivity::class.java))
         }
         btnTestAlert.setOnClickListener {
             startActivity(Intent(this, AlertActivity::class.java).apply {
@@ -132,8 +137,15 @@ class MainActivity : AppCompatActivity() {
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-        // Refresh when returning from history or alert screen
+        // Returning from a child screen: if the user cleared their store via the
+        // picker (e.g. Switch Store), force them back to the picker. Otherwise
+        // refresh active calls / last alert / store label.
+        if (Session.username(this) != null && !Session.hasStoreSelected(this)) {
+            startActivity(Intent(this, StoreSelectionActivity::class.java))
+            return
+        }
         if (layoutReady.visibility == View.VISIBLE) {
+            Session.username(this)?.let { showReadyState(it) }
             refreshLastAlert()
             refreshActiveCalls()
         }
@@ -178,8 +190,8 @@ class MainActivity : AppCompatActivity() {
                     progressLogin.visibility = View.GONE
                     if (success) {
                         tvLoginError.visibility = View.GONE
-                        saveUsername(username)
-                        showReadyState(username)
+                        Session.setUsername(this, username)
+                        routePostLogin(username)
                     } else {
                         showLoginError("Invalid credentials")
                     }
@@ -207,7 +219,7 @@ class MainActivity : AppCompatActivity() {
 
             runOnUiThread {
                 btnLogout.isEnabled = true
-                clearUsername()
+                Session.clear(this)
                 showLoginState()
                 Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show()
             }
@@ -227,17 +239,17 @@ class MainActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     if (loggedIn && username.isNotBlank()) {
-                        saveUsername(username)
-                        showReadyState(username)
+                        Session.setUsername(this, username)
+                        routePostLogin(username)
                     } else {
-                        clearUsername()
+                        Session.clear(this)
                         showLoginState()
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    val savedUser = getSavedUsername()
-                    if (savedUser != null) showReadyState(savedUser)
+                    val savedUser = Session.username(this)
+                    if (savedUser != null) routePostLogin(savedUser)
                     else showLoginState()
                 }
             }
@@ -258,12 +270,29 @@ class MainActivity : AppCompatActivity() {
         stopActiveCallsPulse()
     }
 
+    /**
+     * Routes after successful auth. If the user has not picked a store yet, send
+     * them to the store picker — alerts only flow once a per-store FCM topic is
+     * subscribed.
+     */
+    private fun routePostLogin(username: String) {
+        if (!Session.hasStoreSelected(this)) {
+            startActivity(Intent(this, StoreSelectionActivity::class.java))
+            return
+        }
+        Session.resubscribeCurrentTopic(this)
+        showReadyState(username)
+    }
+
     private fun showReadyState(username: String) {
         layoutLogin.visibility = View.GONE
         layoutReady.visibility = View.VISIBLE
         tvReadyUser.text       = username
         tvUserAvatar.text      = username.first().uppercaseChar().toString()
         tvStatus.text          = "Ready — Listening for calls"
+        val store = Session.storeName(this) ?: Session.storeCode(this).orEmpty()
+        val co    = Session.companyCode(this).orEmpty()
+        tvCurrentStore.text    = if (store.isNotEmpty()) "$co • $store" else co
         startPulse()
         refreshLastAlert()
         refreshActiveCalls()
@@ -429,6 +458,9 @@ class MainActivity : AppCompatActivity() {
         tvActiveCountStatus  = findViewById(R.id.tvActiveCountStatus)
         viewActiveCallsPulse = findViewById(R.id.viewActiveCallsPulse)
         btnRespondNow        = findViewById(R.id.btnRespondNow)
+        btnAdmin             = findViewById(R.id.btnAdmin)
+        btnSwitchStore       = findViewById(R.id.btnSwitchStore)
+        tvCurrentStore       = findViewById(R.id.tvCurrentStore)
     }
 
     private fun postToRelay(path: String, body: String): JSONObject {
@@ -454,26 +486,6 @@ class MainActivity : AppCompatActivity() {
         }
         val response = conn.inputStream.bufferedReader().readText()
         return JSONObject(response)
-    }
-
-    private fun saveUsername(username: String) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-            .putString(PREF_USERNAME, username).apply()
-    }
-
-    private fun clearUsername() {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-            .remove(PREF_USERNAME).apply()
-    }
-
-    private fun getSavedUsername(): String? =
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(PREF_USERNAME, null)
-
-    private fun subscribeToFcmTopic() {
-        FirebaseMessaging.getInstance().subscribeToTopic(FCM_TOPIC)
-            .addOnFailureListener {
-                Toast.makeText(this, "FCM subscription failed", Toast.LENGTH_SHORT).show()
-            }
     }
 
     private fun askNotificationPermission() {

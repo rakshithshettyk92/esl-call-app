@@ -289,6 +289,15 @@
                                     android:textColor="@color/text_secondary" />
 
                                 <TextView
+                                    android:id="@+id/tvCurrentStore"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text=""
+                                    android:textSize="12sp"
+                                    android:textColor="@color/primary" />
+
+                                <TextView
                                     android:id="@+id/tvActiveCountStatus"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -442,6 +451,31 @@
                     android:layout_marginBottom="10dp"
                     android:text="Test Alert Popup"
                     android:backgroundTint="@color/primary" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <Button
+                        android:id="@+id/btnSwitchStore"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:text="Switch Store"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <Button
+                        android:id="@+id/btnAdmin"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:text="Admin"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/btnLogout"

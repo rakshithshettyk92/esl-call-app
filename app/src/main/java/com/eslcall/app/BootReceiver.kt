@@ -4,19 +4,23 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.google.firebase.messaging.FirebaseMessaging
 
 /**
- * Re-subscribes to the FCM topic after the device reboots.
- * FCM subscriptions persist, but this ensures we're always subscribed.
+ * Re-subscribes to the per-store FCM topic after the device reboots. The actual
+ * topic name depends on which store the user picked (Session knows). No-op when
+ * no store is selected — alerts shouldn't flow until the user picks one.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == "android.intent.action.QUICKBOOT_POWERON"
         ) {
-            FirebaseMessaging.getInstance().subscribeToTopic("employee-calls")
-                .addOnSuccessListener { Log.i("BootReceiver", "Re-subscribed to FCM topic") }
+            if (Session.hasStoreSelected(context)) {
+                Session.resubscribeCurrentTopic(context)
+                Log.i("BootReceiver", "Re-subscribed to current per-store FCM topic")
+            } else {
+                Log.i("BootReceiver", "No store selected — skipping FCM re-subscribe")
+            }
         }
     }
 }

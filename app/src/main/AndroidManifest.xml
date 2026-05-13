@@ -71,6 +71,20 @@
             android:exported="false"
             android:theme="@style/Theme.ESLCallApp.History" />
 
+        <!-- Company + store picker, required after login before alerts can flow -->
+        <activity
+            android:name=".StoreSelectionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Admin: per-store field mapping for article columns -->
+        <activity
+            android:name=".FieldMappingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Re-subscribe to FCM topic after reboot -->
         <receiver
             android:name=".BootReceiver"

@@ -44,9 +44,11 @@ class OnMyWayReceiver : BroadcastReceiver() {
         // Call relay in background to trigger ESL actions
         Thread {
             try {
+                val storeCode = Session.storeCode(context).orEmpty()
                 val body = JSONObject().apply {
                     put("companyCode", companyCode)
-                    put("labelCode", labelCode)
+                    put("storeCode",   storeCode)
+                    put("labelCode",   labelCode)
                 }.toString()
 
                 val conn = (URL("${Constants.RELAY_URL}/esl/acknowledge")

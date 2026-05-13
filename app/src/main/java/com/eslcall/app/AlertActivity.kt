@@ -267,8 +267,10 @@ class AlertActivity : AppCompatActivity() {
 
         Thread {
             try {
+                val storeCode = Session.storeCode(this).orEmpty()
                 val body = JSONObject().apply {
                     put("companyCode", companyCode)
+                    put("storeCode",   storeCode)
                     put("labelCode",   labelCode)
                 }.toString()
 

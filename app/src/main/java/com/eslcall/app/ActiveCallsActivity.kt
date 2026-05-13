@@ -191,8 +191,10 @@ class ActiveCallsActivity : AppCompatActivity() {
     private fun acknowledgeAlert(alert: PendingAlert) {
         Thread {
             try {
+                val storeCode = Session.storeCode(this).orEmpty()
                 val body = JSONObject().apply {
                     put("companyCode", alert.companyCode)
+                    put("storeCode",   storeCode)
                     put("labelCode",   alert.labelCode)
                 }.toString()
 
