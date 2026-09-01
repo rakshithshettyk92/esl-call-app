@@ -1,5 +1,8 @@
 package com.eslcall.app
 
+import android.content.Context
+import android.util.Log
+import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -8,8 +11,8 @@ import java.net.URL
 import java.net.URLEncoder
 
 /**
- * Thin HTTP wrapper around the relay. Adds the shared x-auth-key header and
- * surfaces non-2xx responses as exceptions so callers handle them.
+ * Thin HTTP wrapper around the relay. Associate requests carry only the
+ * device's opaque relay session; the AIMS webhook secret is never in the APK.
  */
 object RelayApi {
 
@@ -17,27 +20,78 @@ object RelayApi {
         val url  = buildUrl(path, query)
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
-            setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
+            Session.relaySessionToken(EslCallApplication.instance)?.let {
+                setRequestProperty("X-Session-Token", it)
+            }
             setRequestProperty("accept", "application/json")
-            connectTimeout = 10_000
-            readTimeout    = 10_000
+            connectTimeout = Constants.CONNECT_TIMEOUT_MS
+            readTimeout    = Constants.READ_TIMEOUT_MS
         }
         return readJson(conn)
     }
 
-    fun postJson(path: String, body: JSONObject, query: Map<String, String> = emptyMap()): JSONObject {
+    fun postJson(path: String, body: JSONObject, query: Map<String, String> = emptyMap(),
+                 sessionToken: String? = Session.relaySessionToken(EslCallApplication.instance)): JSONObject {
         val url  = buildUrl(path, query)
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
+            sessionToken?.let { setRequestProperty("X-Session-Token", it) }
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("accept", "application/json")
             doOutput       = true
-            connectTimeout = 10_000
-            readTimeout    = 10_000
+            connectTimeout = Constants.CONNECT_TIMEOUT_MS
+            readTimeout    = Constants.READ_TIMEOUT_MS
         }
         OutputStreamWriter(conn.outputStream).use { it.write(body.toString()) }
         return readJson(conn)
+    }
+
+    fun registerCurrentDeviceAsync(context: Context) {
+        val appContext = context.applicationContext
+        val company = Session.companyCode(appContext).orEmpty()
+        val store = Session.storeCode(appContext).orEmpty()
+        if (Session.relaySessionToken(appContext).isNullOrBlank() || company.isBlank() || store.isBlank()) return
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            registerDeviceTokenAsync(appContext, token)
+        }.addOnFailureListener { Log.w("RelayApi", "Could not obtain FCM token", it) }
+    }
+
+    fun registerDeviceTokenAsync(context: Context, fcmToken: String) {
+        val appContext = context.applicationContext
+        val company = Session.companyCode(appContext).orEmpty()
+        val store = Session.storeCode(appContext).orEmpty()
+        if (fcmToken.isBlank() || company.isBlank() || store.isBlank()) return
+        Thread {
+            runCatching {
+                postJson(Constants.PATH_DEVICE_REGISTER, JSONObject().apply {
+                    put("fcmToken", fcmToken)
+                    put("companyCode", company)
+                    put("storeCode", store)
+                    put("storeName", Session.storeName(appContext).orEmpty())
+                })
+            }.onFailure { Log.w("RelayApi", "Device registration failed", it) }
+        }.start()
+    }
+
+    fun unregisterCurrentDeviceAsync(sessionToken: String?) {
+        if (sessionToken.isNullOrBlank()) return
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { fcmToken ->
+            Thread {
+                runCatching {
+                    postJson(Constants.PATH_DEVICE_UNREGISTER, JSONObject().put("fcmToken", fcmToken),
+                        sessionToken = sessionToken)
+                }.onFailure { Log.w("RelayApi", "Device unregistration failed", it) }
+            }.start()
+        }
+    }
+
+    fun logoutSessionAsync(sessionToken: String?) {
+        if (sessionToken.isNullOrBlank()) return
+        Thread {
+            runCatching {
+                postJson(Constants.PATH_AUTH_LOGOUT, JSONObject(), sessionToken = sessionToken)
+            }.onFailure { Log.w("RelayApi", "Session logout failed", it) }
+        }.start()
     }
 
     fun fetchStores(company: String): List<Store> {
@@ -84,21 +138,12 @@ object RelayApi {
 
     /**
      * Fire-and-forget report of a missed/dismissed alert so the relay's
-     * analytics can record outcomes it never saw on its own. Runs on a
-     * background thread; swallows all errors — never blocks the caller.
+     * analytics can record outcomes it never saw on its own. WorkManager keeps
+     * retrying across temporary network loss and process restarts.
      */
-    fun reportStatusAsync(companyCode: String, storeCode: String, labelCode: String, status: String) {
-        if (companyCode.isBlank() || storeCode.isBlank() || labelCode.isBlank()) return
-        Thread {
-            try {
-                postJson(Constants.PATH_ESL_STATUS, JSONObject().apply {
-                    put("companyCode", companyCode)
-                    put("storeCode",   storeCode)
-                    put("labelCode",   labelCode)
-                    put("status",      status)
-                })
-            } catch (_: Exception) { /* best-effort */ }
-        }.start()
+    fun reportStatusAsync(context: android.content.Context, companyCode: String,
+                          storeCode: String, labelCode: String, status: String) {
+        StatusWorker.enqueue(context, companyCode, storeCode, labelCode, status)
     }
 
     fun saveFieldMapping(company: String, store: String, mapping: CallFieldMapping) {
@@ -134,13 +179,21 @@ object RelayApi {
     }
 
     private fun readJson(conn: HttpURLConnection): JSONObject {
-        val code   = conn.responseCode
-        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-        val text   = stream?.bufferedReader()?.use { it.readText() } ?: ""
-        if (code !in 200..299) {
-            throw RuntimeException("HTTP $code: ${text.take(500)}")
+        try {
+            val code   = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text   = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            if (code !in 200..299) {
+                val message = runCatching { JSONObject(text).optString("error") }
+                    .getOrNull()
+                    .orEmpty()
+                    .ifBlank { "Server returned HTTP $code" }
+                throw RelayHttpException(code, message)
+            }
+            return JSONObject(text)
+        } finally {
+            conn.disconnect()
         }
-        return JSONObject(text)
     }
 
     private fun jsonArrayToStringList(arr: JSONArray): List<String> {
@@ -149,3 +202,5 @@ object RelayApi {
         return out
     }
 }
+
+class RelayHttpException(val statusCode: Int, message: String) : RuntimeException(message)

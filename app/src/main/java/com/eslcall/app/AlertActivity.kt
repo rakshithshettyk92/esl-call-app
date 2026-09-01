@@ -1,6 +1,7 @@
 package com.eslcall.app
 
 import android.app.NotificationManager
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -25,9 +26,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import org.json.JSONObject
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.UUID
 
 /**
@@ -44,10 +42,10 @@ class AlertActivity : AppCompatActivity() {
         const val EXTRA_COMPANY_CODE    = "extra_company_code"
         const val EXTRA_LABEL_CODE      = "extra_label_code"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
-        private val AUTO_DISMISS_MS = Constants.ALERT_TIMEOUT_MS
     }
 
     private var countDownTimer:         CountDownTimer? = null
+    private val autoDismissMs by lazy { DeviceSettings.alertTimeoutMs(this) }
     private var currentLabelCode:       String = ""
     private var currentNotifId:         Int    = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID
     private var currentReceivedAt:      Long   = 0L
@@ -98,12 +96,20 @@ class AlertActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            (getSystemService(KEYGUARD_SERVICE) as KeyguardManager)
+                .requestDismissKeyguard(this, null)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                     WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-        )
+            )
+        }
 
         setContentView(R.layout.activity_alert)
 
@@ -117,6 +123,10 @@ class AlertActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnClose).setOnClickListener { navigateToMain() }
         btnDismiss.setOnClickListener { dismissCurrent(AlertStatus.DISMISSED) }
+        onBackPressedDispatcher.addCallback(this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = navigateToMain()
+            })
 
         ContextCompat.registerReceiver(
             this, cancelReceiver,
@@ -175,7 +185,7 @@ class AlertActivity : AppCompatActivity() {
                     HapticFeedbackConstants.VIRTUAL_KEY
             )
             if (alert.companyCode.isNotBlank() && alert.labelCode.isNotBlank()) {
-                triggerAcknowledge(alert.companyCode, alert.labelCode, alert.message)
+                triggerAcknowledge(alert.callId, alert.companyCode, alert.labelCode, alert.message)
             } else {
                 dismissCurrent(AlertStatus.DISMISSED)
             }
@@ -232,7 +242,7 @@ class AlertActivity : AppCompatActivity() {
 
     private fun restartCountdown() {
         countDownTimer?.cancel()
-        val remainingMs = AUTO_DISMISS_MS - (System.currentTimeMillis() - currentReceivedAt)
+        val remainingMs = autoDismissMs - (System.currentTimeMillis() - currentReceivedAt)
         if (remainingMs <= 0) {
             // Time already expired while the screen wasn't open — mark missed immediately
             dismissCurrent(AlertStatus.MISSED)
@@ -241,7 +251,7 @@ class AlertActivity : AppCompatActivity() {
         countDownTimer = object : CountDownTimer(remainingMs, 1_000) {
             override fun onTick(millisUntilFinished: Long) {
                 val secondsLeft = (millisUntilFinished / 1_000).toInt()
-                val progress    = (millisUntilFinished * 100 / AUTO_DISMISS_MS).toInt()
+                val progress    = (millisUntilFinished * 100 / autoDismissMs).toInt()
                 tvCountdown.text           = secondsLeft.toString()
                 tvAutoDismiss.text         = "Auto-closing in ${secondsLeft}s"
                 progressCountdown.progress = progress
@@ -256,7 +266,7 @@ class AlertActivity : AppCompatActivity() {
     // On My Way — call relay
     // -------------------------------------------------------------------------
 
-    private fun triggerAcknowledge(companyCode: String, labelCode: String, message: String) {
+    private fun triggerAcknowledge(callId: String, companyCode: String, labelCode: String, message: String) {
         stopRingtone()
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text      = "Sending..."
@@ -269,25 +279,17 @@ class AlertActivity : AppCompatActivity() {
             try {
                 val storeCode = Session.storeCode(this).orEmpty()
                 val body = JSONObject().apply {
+                    put("callId",      callId)
                     put("companyCode", companyCode)
                     put("storeCode",   storeCode)
                     put("labelCode",   labelCode)
-                }.toString()
-
-                val conn = (URL("${Constants.RELAY_URL}/esl/acknowledge")
-                    .openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
-                    doOutput        = true
-                    connectTimeout  = 10_000
-                    readTimeout     = 10_000
                 }
-                OutputStreamWriter(conn.outputStream).use { it.write(body) }
-
-                val responseCode = conn.responseCode
-                if (responseCode < 400) conn.inputStream.bufferedReader().readText()
-                else conn.errorStream.bufferedReader().readText()
+                val responseCode = try {
+                    RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
+                    200
+                } catch (e: RelayHttpException) {
+                    e.statusCode
+                }
 
                 runOnUiThread {
                     when (responseCode) {
@@ -364,11 +366,6 @@ class AlertActivity : AppCompatActivity() {
     // Back button = go home (keep alert in queue)
     // -------------------------------------------------------------------------
 
-    @Deprecated("Overriding for back behaviour")
-    override fun onBackPressed() {
-        navigateToMain()
-    }
-
     private fun navigateToMain() {
         stopRingtone()
         startActivity(Intent(this, MainActivity::class.java).apply {
@@ -423,12 +420,10 @@ class AlertActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        AppForegroundTracker.isInForeground = true
     }
 
     override fun onPause() {
         super.onPause()
-        AppForegroundTracker.isInForeground = false
         stopRingtone()
     }
 

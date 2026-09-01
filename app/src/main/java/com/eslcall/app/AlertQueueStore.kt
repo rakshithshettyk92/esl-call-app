@@ -6,6 +6,7 @@ import org.json.JSONObject
 
 data class PendingAlert(
     val id:             String,
+    val callId:         String,
     val message:        String,
     val companyCode:    String,
     val labelCode:      String,
@@ -19,28 +20,28 @@ object AlertQueueStore {
     private const val KEY   = "queue_json"
 
     /** Add to end of queue. Skips silently if same labelCode is already queued. */
-    fun enqueue(context: Context, alert: PendingAlert) {
+    @Synchronized fun enqueue(context: Context, alert: PendingAlert) {
         val list = loadAll(context)
         if (list.any { it.labelCode == alert.labelCode }) return
         saveAll(context, list + alert)
     }
 
-    fun peek(context: Context): PendingAlert? = loadAll(context).firstOrNull()
+    @Synchronized fun peek(context: Context): PendingAlert? = loadAll(context).firstOrNull()
 
-    fun dequeue(context: Context): PendingAlert? {
+    @Synchronized fun dequeue(context: Context): PendingAlert? {
         val list = loadAll(context)
         if (list.isEmpty()) return null
         saveAll(context, list.drop(1))
         return list.first()
     }
 
-    fun size(context: Context): Int = loadAll(context).size
+    @Synchronized fun size(context: Context): Int = loadAll(context).size
 
-    fun removeByLabelCode(context: Context, labelCode: String) {
+    @Synchronized fun removeByLabelCode(context: Context, labelCode: String) {
         saveAll(context, loadAll(context).filter { it.labelCode != labelCode })
     }
 
-    fun loadAll(context: Context): List<PendingAlert> {
+    @Synchronized fun loadAll(context: Context): List<PendingAlert> {
         val json  = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY, "[]") ?: "[]"
         val array = try { JSONArray(json) } catch (_: Exception) { return emptyList() }
@@ -49,6 +50,7 @@ object AlertQueueStore {
                 val o = array.getJSONObject(i)
                 PendingAlert(
                     id             = o.getString("id"),
+                    callId         = o.optString("callId"),
                     message        = o.getString("message"),
                     companyCode    = o.getString("companyCode"),
                     labelCode      = o.getString("labelCode"),
@@ -59,13 +61,14 @@ object AlertQueueStore {
         }
     }
 
-    fun clear(context: Context) = saveAll(context, emptyList())
+    @Synchronized fun clear(context: Context) = saveAll(context, emptyList())
 
     private fun saveAll(context: Context, list: List<PendingAlert>) {
         val array = JSONArray()
         list.forEach { a ->
             array.put(JSONObject().apply {
                 put("id",             a.id)
+                put("callId",         a.callId)
                 put("message",        a.message)
                 put("companyCode",    a.companyCode)
                 put("labelCode",      a.labelCode)

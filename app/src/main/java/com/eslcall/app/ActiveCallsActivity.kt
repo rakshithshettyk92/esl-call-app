@@ -18,9 +18,6 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.json.JSONObject
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Shows all currently active (un-acknowledged) alerts in a scrollable list.
@@ -85,16 +82,20 @@ class ActiveCallsActivity : AppCompatActivity() {
 
         adapter = ActiveCallsAdapter(
             items        = emptyList(),
+            timeoutMs    = DeviceSettings.alertTimeoutMs(this),
             onAcknowledge = { alert -> acknowledgeAlert(alert) },
             onDismiss     = { alert -> dismissAlert(alert) }
         )
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter       = adapter
+        onBackPressedDispatcher.addCallback(this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = navigateToMain()
+            })
     }
 
     override fun onResume() {
         super.onResume()
-        AppForegroundTracker.isInForeground = true
         ContextCompat.registerReceiver(
             this, refreshReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
@@ -111,7 +112,6 @@ class ActiveCallsActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        AppForegroundTracker.isInForeground = false
         tickHandler.removeCallbacks(tickRunnable)
         unregisterReceiver(refreshReceiver)
         unregisterReceiver(cancelReceiver)
@@ -126,7 +126,7 @@ class ActiveCallsActivity : AppCompatActivity() {
         val now = System.currentTimeMillis()
         AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
-            .filter  { (now - it.receivedAt) >= Constants.ALERT_TIMEOUT_MS }
+            .filter  { (now - it.receivedAt) >= DeviceSettings.alertTimeoutMs(this) }
             .forEach { alert ->
                 AlertHistoryStore.save(this, AlertHistoryItem(
                     message     = alert.message,
@@ -193,24 +193,17 @@ class ActiveCallsActivity : AppCompatActivity() {
             try {
                 val storeCode = Session.storeCode(this).orEmpty()
                 val body = JSONObject().apply {
+                    put("callId",      alert.callId)
                     put("companyCode", alert.companyCode)
                     put("storeCode",   storeCode)
                     put("labelCode",   alert.labelCode)
-                }.toString()
-
-                val conn = (URL("${Constants.RELAY_URL}/esl/acknowledge")
-                    .openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
-                    doOutput        = true
-                    connectTimeout  = 10_000
-                    readTimeout     = 10_000
                 }
-                OutputStreamWriter(conn.outputStream).use { it.write(body) }
-                val code = conn.responseCode
-                if (code < 400) conn.inputStream.bufferedReader().readText()
-                else conn.errorStream.bufferedReader().readText()
+                val code = try {
+                    RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
+                    200
+                } catch (e: RelayHttpException) {
+                    e.statusCode
+                }
 
                 runOnUiThread {
                     when (code) {
@@ -262,9 +255,6 @@ class ActiveCallsActivity : AppCompatActivity() {
         })
         finish()
     }
-
-    @Deprecated("Overriding for back behaviour")
-    override fun onBackPressed() = navigateToMain()
 
     // -------------------------------------------------------------------------
     // Dismiss

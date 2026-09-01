@@ -10,7 +10,7 @@ object AlertHistoryStore {
     private const val KEY_HISTORY = "history_json"
     private const val MAX_ITEMS   = 100
 
-    fun save(context: Context, item: AlertHistoryItem) {
+    @Synchronized fun save(context: Context, item: AlertHistoryItem) {
         val prefs    = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val existing = prefs.getString(KEY_HISTORY, "[]")
         val array    = try { JSONArray(existing) } catch (_: Exception) { JSONArray() }
@@ -36,9 +36,9 @@ object AlertHistoryStore {
         // Acknowledged is already known via /esl/acknowledge.
         when (item.status) {
             AlertStatus.MISSED    -> RelayApi.reportStatusAsync(
-                item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "missed")
+                context, item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "missed")
             AlertStatus.DISMISSED -> RelayApi.reportStatusAsync(
-                item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "dismissed")
+                context, item.companyCode, Session.storeCode(context).orEmpty(), item.labelCode, "dismissed")
             else -> {}
         }
     }
@@ -48,7 +48,7 @@ object AlertHistoryStore {
      * Called when a cancel FCM arrives — if this device already saved an ACKNOWLEDGED
      * entry (i.e. it was the one that tapped On My Way), keep it in history.
      */
-    fun removeByLabelCode(context: Context, labelCode: String) {
+    @Synchronized fun removeByLabelCode(context: Context, labelCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json  = prefs.getString(KEY_HISTORY, "[]") ?: "[]"
         val array = try { JSONArray(json) } catch (_: Exception) { return }
@@ -62,7 +62,7 @@ object AlertHistoryStore {
         prefs.edit().putString(KEY_HISTORY, kept.toString()).apply()
     }
 
-    fun load(context: Context): List<AlertHistoryItem> {
+    @Synchronized fun load(context: Context): List<AlertHistoryItem> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json  = prefs.getString(KEY_HISTORY, "[]")
         val array = try { JSONArray(json) } catch (_: Exception) { return emptyList() }

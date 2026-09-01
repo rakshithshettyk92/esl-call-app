@@ -8,11 +8,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.View
+import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
@@ -20,15 +22,15 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.provider.Settings
+import android.app.NotificationManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import org.json.JSONObject
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -67,6 +69,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvCurrentStore:        TextView
     private lateinit var layoutSetupBanner:     LinearLayout
     private lateinit var btnSetupBannerConfigure: Button
+    private lateinit var layoutAuthBanner:      LinearLayout
+    private lateinit var btnAuthBannerSignIn:   Button
+    private lateinit var tvAuthBannerMessage: TextView
+    private lateinit var tvAuthBannerTitle: TextView
+    private lateinit var layoutDeliveryBanner: LinearLayout
+    private lateinit var tvDeliveryBannerMessage: TextView
+    private lateinit var btnDeliverySettings: Button
     private lateinit var layoutActiveCalls:    LinearLayout
     private lateinit var tvActiveCallsCount:   TextView
     private lateinit var tvActiveCountStatus:  TextView
@@ -75,6 +84,20 @@ class MainActivity : AppCompatActivity() {
 
     private var pulseAnimator:       AnimatorSet? = null
     private var activeCallsAnimator: AnimatorSet? = null
+    private var relayHealthFailures: Int = 0
+
+    // Polls the relay's /auth/status so we can show a banner if the
+    // relay has lost its Solum credentials (e.g. Railway redeploy wiped them).
+    private val authPollHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val authPollRunnable = object : Runnable {
+        override fun run() {
+            if (Session.username(this@MainActivity) != null
+                && layoutReady.visibility == View.VISIBLE) {
+                checkRelayAuthStatus()
+            }
+            authPollHandler.postDelayed(this, DeviceSettings.authPollIntervalMs(this@MainActivity))
+        }
+    }
 
     private val activeListReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -107,6 +130,12 @@ class MainActivity : AppCompatActivity() {
             // user is being prompted to do exactly that one thing).
             startActivity(Intent(this, FieldMappingActivity::class.java))
         }
+        btnAuthBannerSignIn.setOnClickListener {
+            // Relay has lost its Solum auth. Show the login form so the user
+            // can re-enter credentials without losing their store selection.
+            showLoginState()
+        }
+        btnDeliverySettings.setOnClickListener { openAlertDeliverySettings() }
         btnSwitchStore.setOnClickListener {
             Session.clearStore(this)
             startActivity(Intent(this, StoreSelectionActivity::class.java))
@@ -118,6 +147,7 @@ class MainActivity : AppCompatActivity() {
             // dismiss locally without calling the relay.
             AlertQueueStore.enqueue(this, PendingAlert(
                 id             = java.util.UUID.randomUUID().toString(),
+                callId         = "",
                 message        = "Test — Shelf A3, Aisle 2",
                 companyCode    = "",
                 labelCode      = "",
@@ -149,7 +179,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        AppForegroundTracker.isInForeground = true
         ContextCompat.registerReceiver(
             this, activeListReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
@@ -158,6 +187,12 @@ class MainActivity : AppCompatActivity() {
         // Apply UI state from Session. Done in onResume (not just onCreate) so
         // returning from the store picker swaps the login layout for the ready
         // screen even when we never finished MainActivity.
+        val sessionExpired = Session.isExpired(this, DeviceSettings.sessionTimeoutMs(this))
+        if (sessionExpired) {
+            Session.clear(this)
+            Toast.makeText(this, "This device session expired. Sign in again.",
+                Toast.LENGTH_LONG).show()
+        }
         val user = Session.username(this)
         when {
             user != null && Session.hasStoreSelected(this) -> {
@@ -174,12 +209,17 @@ class MainActivity : AppCompatActivity() {
                 showLoginState()
             }
         }
+
+        // Start polling relay auth health while the home screen is in foreground.
+        authPollHandler.removeCallbacks(authPollRunnable)
+        authPollHandler.post(authPollRunnable)
+        refreshAlertDeliveryStatus()
     }
 
     override fun onPause() {
         super.onPause()
-        AppForegroundTracker.isInForeground = false
         try { unregisterReceiver(activeListReceiver) } catch (_: Exception) {}
+        authPollHandler.removeCallbacks(authPollRunnable)
     }
 
     // -------------------------------------------------------------------------
@@ -204,18 +244,20 @@ class MainActivity : AppCompatActivity() {
                 val body = JSONObject().apply {
                     put("username", username)
                     put("password", password)
-                }.toString()
+                }
 
-                val result  = postToRelay("/auth/login", body)
+                val result  = RelayApi.postJson(Constants.PATH_AUTH_LOGIN, body)
                 val success = result.optString("status") == "ok"
+                val sessionToken = result.optString("sessionToken")
 
                 runOnUiThread {
                     btnLogin.isEnabled       = true
                     btnLogin.text            = "Sign In"
                     progressLogin.visibility = View.GONE
-                    if (success) {
+                    if (success && sessionToken.isNotBlank()) {
                         tvLoginError.visibility = View.GONE
-                        Session.setUsername(this, username)
+                        layoutAuthBanner.visibility = View.GONE
+                        Session.setLogin(this, username, sessionToken)
                         routePostLogin(username)
                     } else {
                         showLoginError("Invalid credentials")
@@ -226,7 +268,7 @@ class MainActivity : AppCompatActivity() {
                     btnLogin.isEnabled       = true
                     btnLogin.text            = "Sign In"
                     progressLogin.visibility = View.GONE
-                    showLoginError("Could not connect to server")
+                    showLoginError(e.message ?: "Could not connect to server")
                 }
             }
         }.start()
@@ -237,18 +279,10 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun attemptLogout() {
-        btnLogout.isEnabled = false
-
-        Thread {
-            try { postToRelay("/auth/logout", "{}") } catch (_: Exception) {}
-
-            runOnUiThread {
-                btnLogout.isEnabled = true
-                Session.clear(this)
-                showLoginState()
-                Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show()
-            }
-        }.start()
+        Session.clear(this)
+        layoutAuthBanner.visibility = View.GONE
+        showLoginState()
+        Toast.makeText(this, "Signed out on this device", Toast.LENGTH_SHORT).show()
     }
 
     // -------------------------------------------------------------------------
@@ -256,29 +290,17 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun checkAuthStatus() {
-        Thread {
-            try {
-                val result   = getFromRelay("/auth/status")
-                val loggedIn = result.optBoolean("loggedIn", false)
-                val username = result.optString("username", "")
-
-                runOnUiThread {
-                    if (loggedIn && username.isNotBlank()) {
-                        Session.setUsername(this, username)
-                        routePostLogin(username)
-                    } else {
-                        Session.clear(this)
-                        showLoginState()
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    val savedUser = Session.username(this)
-                    if (savedUser != null) routePostLogin(savedUser)
-                    else showLoginState()
-                }
-            }
-        }.start()
+        if (Session.username(this) != null && !Session.relaySessionToken(this).isNullOrBlank()) {
+            checkRelayAuthStatus()
+            return
+        }
+        // A manual or timed device sign-out must remain signed out even when
+        // the shared relay session is still healthy for other phones.
+        if (Session.wasLocallySignedOut(this)) {
+            showLoginState()
+            return
+        }
+        showLoginState()
     }
 
     // -------------------------------------------------------------------------
@@ -286,6 +308,7 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun showLoginState() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         layoutLogin.visibility  = View.VISIBLE
         layoutReady.visibility  = View.GONE
         etUsername.text.clear()
@@ -310,6 +333,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showReadyState(username: String) {
+        if (DeviceSettings.keepReadyScreenOn(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
         layoutLogin.visibility = View.GONE
         layoutReady.visibility = View.VISIBLE
         tvReadyUser.text       = username
@@ -322,6 +348,74 @@ class MainActivity : AppCompatActivity() {
         refreshLastAlert()
         refreshActiveCalls()
         refreshSetupBanner()
+    }
+
+    /**
+     * Polls /auth/status. When the relay reports loggedIn=false (e.g. after a
+     * Railway redeploy), surfaces a banner so the user can re-authenticate
+     * instead of staring at "Ready" while presses are being dropped.
+     * Network failures don't trigger the banner — too noisy.
+     */
+    private fun checkRelayAuthStatus() {
+        Thread {
+            val status = try {
+                val json = RelayApi.get(Constants.PATH_AUTH_STATUS)
+                Triple(!json.optBoolean("operational", json.optBoolean("loggedIn", false)),
+                    json.optBoolean("managedLogin", false), true)
+            } catch (_: Exception) {
+                Triple(false, false, false)
+            }
+            if (!status.third) {
+                relayHealthFailures += 1
+                if (relayHealthFailures >= 3) runOnUiThread {
+                    layoutAuthBanner.visibility = View.VISIBLE
+                    tvAuthBannerTitle.text = "Relay unavailable"
+                    tvAuthBannerMessage.text =
+                        "Can't reach the relay. Check this device's connection or the VM service."
+                    btnAuthBannerSignIn.visibility = View.GONE
+                }
+                return@Thread
+            }
+            relayHealthFailures = 0
+            runOnUiThread {
+                layoutAuthBanner.visibility = if (status.first) View.VISIBLE else View.GONE
+                tvAuthBannerTitle.text = if (status.second) "Relay needs attention" else "Server signed out"
+                tvAuthBannerMessage.text = if (status.second) {
+                    "Relay authentication needs attention. Check Employee Call Operation."
+                } else {
+                    "Alerts can't be delivered right now. Sign in again to restore."
+                }
+                btnAuthBannerSignIn.visibility = if (status.second) View.GONE else View.VISIBLE
+            }
+        }.start()
+    }
+
+    private fun refreshAlertDeliveryStatus() {
+        val notificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        val fullScreenAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()
+        } else true
+        layoutDeliveryBanner.visibility =
+            if (notificationsEnabled && fullScreenAllowed) View.GONE else View.VISIBLE
+        tvDeliveryBannerMessage.text = when {
+            !notificationsEnabled -> "Notifications are disabled. Calls may not appear."
+            !fullScreenAllowed -> "Full-screen alerts are disabled. Calls may only appear in the notification shade."
+            else -> ""
+        }
+    }
+
+    private fun openAlertDeliverySettings() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            !nm.canUseFullScreenIntent()) {
+            Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                Uri.parse("package:$packageName"))
+        } else {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+        }
+        startActivity(intent)
     }
 
     /**
@@ -380,7 +474,7 @@ class MainActivity : AppCompatActivity() {
         val now = System.currentTimeMillis()
         AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
-            .filter { (now - it.receivedAt) >= Constants.ALERT_TIMEOUT_MS }
+            .filter { (now - it.receivedAt) >= DeviceSettings.alertTimeoutMs(this) }
             .forEach { alert ->
                 AlertHistoryStore.save(this, AlertHistoryItem(
                     message     = alert.message,
@@ -517,31 +611,13 @@ class MainActivity : AppCompatActivity() {
         tvCurrentStore       = findViewById(R.id.tvCurrentStore)
         layoutSetupBanner    = findViewById(R.id.layoutSetupBanner)
         btnSetupBannerConfigure = findViewById(R.id.btnSetupBannerConfigure)
-    }
-
-    private fun postToRelay(path: String, body: String): JSONObject {
-        val conn = (URL("${Constants.RELAY_URL}$path").openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
-            doOutput = true
-            connectTimeout = 10_000
-            readTimeout    = 10_000
-        }
-        OutputStreamWriter(conn.outputStream).use { it.write(body) }
-        val response = conn.inputStream.bufferedReader().readText()
-        return JSONObject(response)
-    }
-
-    private fun getFromRelay(path: String): JSONObject {
-        val conn = (URL("${Constants.RELAY_URL}$path").openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            setRequestProperty(Constants.AUTH_HEADER, Constants.AUTH_KEY)
-            connectTimeout = 10_000
-            readTimeout    = 10_000
-        }
-        val response = conn.inputStream.bufferedReader().readText()
-        return JSONObject(response)
+        layoutAuthBanner     = findViewById(R.id.layoutAuthBanner)
+        btnAuthBannerSignIn  = findViewById(R.id.btnAuthBannerSignIn)
+        tvAuthBannerMessage = findViewById(R.id.tvAuthBannerMessage)
+        tvAuthBannerTitle = findViewById(R.id.tvAuthBannerTitle)
+        layoutDeliveryBanner = findViewById(R.id.layoutDeliveryBanner)
+        tvDeliveryBannerMessage = findViewById(R.id.tvDeliveryBannerMessage)
+        btnDeliverySettings = findViewById(R.id.btnDeliverySettings)
     }
 
     private fun askNotificationPermission() {

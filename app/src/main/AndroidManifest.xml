@@ -6,17 +6,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:allowBackup="true"
+        android:name=".EslCallApplication"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ESLCallApp"
-        android:showOnLockScreen="true">
+        android:usesCleartextTraffic="false"
+        android:theme="@style/Theme.ESLCallApp">
 
         <!-- Main control screen -->
         <activity
@@ -90,6 +90,12 @@
             android:name=".AdminActivity"
             android:exported="false"
             android:theme="@style/Theme.ESLCallApp.History" />
+
+        <activity
+            android:name=".DeviceSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ESLCallApp.History"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Analytics dashboard for the current store -->
         <activity

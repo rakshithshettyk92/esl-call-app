@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class ActiveCallsAdapter(
     private var items: List<PendingAlert>,
+    private val timeoutMs: Long,
     private val onAcknowledge: (PendingAlert) -> Unit,
     private val onDismiss:     (PendingAlert) -> Unit
 ) : RecyclerView.Adapter<ActiveCallsAdapter.ViewHolder>() {
@@ -99,7 +100,7 @@ class ActiveCallsAdapter(
         val expired = mutableListOf<PendingAlert>()
         val now = System.currentTimeMillis()
         items.forEachIndexed { idx, alert ->
-            val remaining = Constants.ALERT_TIMEOUT_MS - (now - alert.receivedAt)
+            val remaining = timeoutMs - (now - alert.receivedAt)
             if (remaining <= 0) expired.add(alert)
             else notifyItemChanged(idx, PAYLOAD_TICK)
         }
@@ -107,7 +108,7 @@ class ActiveCallsAdapter(
     }
 
     private fun bindCountdown(holder: ViewHolder, alert: PendingAlert) {
-        val remaining = Constants.ALERT_TIMEOUT_MS - (System.currentTimeMillis() - alert.receivedAt)
+        val remaining = timeoutMs - (System.currentTimeMillis() - alert.receivedAt)
         if (remaining <= 0) {
             holder.tvCountdown.text = "Expired"
             holder.tvCountdown.setTextColor(0xFFC62828.toInt())

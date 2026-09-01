@@ -38,21 +38,23 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(notificationIdFor(labelCode))
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
+                setPackage(packageName)
                 putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
             })
-            sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
+            sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED).setPackage(packageName))
             return
         }
 
         val message     = data["message"]     ?: "Customer help needed"
+        val callId      = data["callId"]      ?: ""
         val companyCode = data["companyCode"] ?: ""
         val labelCode   = data["labelCode"]   ?: ""
         // New button press — clear any stale acknowledgement so the alert shows fresh
         if (labelCode.isNotBlank()) AcknowledgedStore.clear(this, labelCode)
-        triggerAlert(message, companyCode, labelCode)
+        triggerAlert(callId, message, companyCode, labelCode)
     }
 
-    private fun triggerAlert(message: String, companyCode: String, labelCode: String) {
+    private fun triggerAlert(callId: String, message: String, companyCode: String, labelCode: String) {
         ensureAlertChannel()
         ensureStatusChannel()
 
@@ -63,6 +65,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         AlertQueueStore.enqueue(
             this, PendingAlert(
                 id             = UUID.randomUUID().toString(),
+                callId         = callId,
                 message        = message,
                 companyCode    = companyCode,
                 labelCode      = labelCode,
@@ -75,7 +78,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val appForeground = AppForegroundTracker.isInForeground
 
         // Notify MainActivity / ActiveCallsActivity to refresh
-        sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED))
+        sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED).setPackage(packageName))
 
         if (queueSize == 1) {
             // ── Single alert: full-screen popup + individual notification ──────
@@ -109,6 +112,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     action = OnMyWayReceiver.ACTION_ON_MY_WAY
                     putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
                     putExtra(OnMyWayReceiver.EXTRA_LABEL_CODE,   labelCode)
+                    putExtra(OnMyWayReceiver.EXTRA_CALL_ID,      callId)
                 }
                 val onMyWayPI = PendingIntent.getBroadcast(
                     this, notifId, onMyWayIntent,
@@ -120,7 +124,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
             }
             nm.notify(notifId, builder.build())
-            startActivity(alertIntent)
+            if (appForeground) startActivity(alertIntent)
 
         } else {
             // ── Multiple alerts: cancel all individuals, show grouped ──────────
@@ -154,7 +158,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             nm.notify(GROUPED_NOTIFICATION_ID, grouped)
 
             // Tell AlertActivity (if open) to transition to the list screen
-            sendBroadcast(Intent(ACTION_SWITCH_TO_LIST))
+            sendBroadcast(Intent(ACTION_SWITCH_TO_LIST).setPackage(packageName))
         }
     }
 
@@ -186,6 +190,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
-        Log.d(TAG, "FCM token refreshed (using topic messaging)")
+        Log.d(TAG, "FCM token refreshed; registering device with relay")
+        RelayApi.registerDeviceTokenAsync(this, token)
     }
 }

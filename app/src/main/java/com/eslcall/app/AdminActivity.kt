@@ -32,5 +32,8 @@ class AdminActivity : AppCompatActivity() {
         findViewById<MaterialCardView>(R.id.cardAnalytics).setOnClickListener {
             startActivity(Intent(this, AnalyticsActivity::class.java))
         }
+        findViewById<MaterialCardView>(R.id.cardDeviceSettings).setOnClickListener {
+            startActivity(Intent(this, DeviceSettingsActivity::class.java))
+        }
     }
 }

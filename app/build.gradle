@@ -4,16 +4,38 @@ plugins {
     id 'com.google.gms.google-services'
 }
 
+def stringConfig = { String name, String fallback ->
+    def value = project.findProperty(name) ?: System.getenv(name) ?: fallback
+    return '"' + value.toString().replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
+def intConfig = { String name, int fallback ->
+    def value = project.findProperty(name) ?: System.getenv(name)
+    return value == null ? fallback : Integer.parseInt(value.toString())
+}
+
+def booleanConfig = { String name, boolean fallback ->
+    def value = project.findProperty(name) ?: System.getenv(name)
+    return value == null ? fallback : Boolean.parseBoolean(value.toString())
+}
+
 android {
     namespace 'com.eslcall.app'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.eslcall.app"
         minSdk 26
-        targetSdk 34
+        targetSdk 36
         versionCode 1
         versionName "1.0"
+
+        buildConfigField "String", "RELAY_URL", stringConfig("RELAY_URL", "https://20.121.68.137")
+        buildConfigField "int", "NETWORK_CONNECT_TIMEOUT_SECONDS", intConfig("NETWORK_CONNECT_TIMEOUT_SECONDS", 15).toString()
+        buildConfigField "int", "NETWORK_READ_TIMEOUT_SECONDS", intConfig("NETWORK_READ_TIMEOUT_SECONDS", 30).toString()
+        buildConfigField "int", "AUTH_POLL_INTERVAL_SECONDS", intConfig("AUTH_POLL_INTERVAL_SECONDS", 300).toString()
+        buildConfigField "int", "ALERT_TIMEOUT_SECONDS", intConfig("ALERT_TIMEOUT_SECONDS", 60).toString()
+        buildConfigField "boolean", "KEEP_READY_SCREEN_ON", booleanConfig("KEEP_READY_SCREEN_ON", true).toString()
     }
 
     buildTypes {
@@ -24,16 +46,17 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 
@@ -44,8 +67,10 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
 
     // Firebase Cloud Messaging — receives webhook events pushed from the relay server
     implementation platform('com.google.firebase:firebase-bom:32.7.4')
     implementation 'com.google.firebase:firebase-messaging-ktx'
+    testImplementation 'junit:junit:4.13.2'
 }
