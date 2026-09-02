@@ -166,8 +166,21 @@ object RelayApi {
     }
 
     /** Raw analytics JSON for AnalyticsActivity to render. */
-    fun fetchAnalytics(company: String, store: String, range: String): JSONObject =
-        get(Constants.PATH_ADMIN_ANALYTICS, mapOf("company" to company, "store" to store, "range" to range))
+    fun fetchAnalytics(company: String, store: String, range: String): JSONObject {
+        val localMidnight = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        return get(Constants.PATH_ADMIN_ANALYTICS, mapOf(
+            "company" to company,
+            "store" to store,
+            "range" to range,
+            "timeZone" to java.util.TimeZone.getDefault().id,
+            "todayStartMs" to localMidnight.toString(),
+        ))
+    }
 
     private fun buildUrl(path: String, query: Map<String, String>): String {
         val base = Constants.RELAY_URL + path
@@ -184,11 +197,11 @@ object RelayApi {
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text   = stream?.bufferedReader()?.use { it.readText() } ?: ""
             if (code !in 200..299) {
-                val message = runCatching { JSONObject(text).optString("error") }
-                    .getOrNull()
-                    .orEmpty()
+                val responseBody = runCatching { JSONObject(text) }.getOrNull()
+                val message = responseBody?.optString("message").orEmpty()
+                    .ifBlank { responseBody?.optString("error").orEmpty() }
                     .ifBlank { "Server returned HTTP $code" }
-                throw RelayHttpException(code, message)
+                throw RelayHttpException(code, message, responseBody)
             }
             return JSONObject(text)
         } finally {
@@ -203,4 +216,8 @@ object RelayApi {
     }
 }
 
-class RelayHttpException(val statusCode: Int, message: String) : RuntimeException(message)
+class RelayHttpException(
+    val statusCode: Int,
+    message: String,
+    val responseBody: JSONObject? = null,
+) : RuntimeException(message)

@@ -18,8 +18,10 @@ class AdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_admin)
 
-        findViewById<MaterialToolbar>(R.id.toolbar)
-            .setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<MaterialToolbar>(R.id.toolbar).apply {
+            applyStatusBarInset()
+            setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        }
 
         val co    = Session.companyCode(this).orEmpty()
         val store = Session.storeName(this) ?: Session.storeCode(this).orEmpty()

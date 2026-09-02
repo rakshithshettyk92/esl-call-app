@@ -19,7 +19,7 @@ class BootReceiver : BroadcastReceiver() {
                 Session.resubscribeCurrentTopic(context)
                 Log.i("BootReceiver", "Re-subscribed to current per-store FCM topic")
             } else {
-                Log.i("BootReceiver", "No store selected — skipping FCM re-subscribe")
+                Log.i("BootReceiver", "No store selected. Skipping FCM re-subscribe")
             }
         }
     }

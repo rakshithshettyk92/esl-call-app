@@ -23,6 +23,7 @@ class ActiveCallsAdapter(
     private val inProgress = mutableSetOf<String>()
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val tvPosition:  TextView = view.findViewById(R.id.tvCallPosition)
         val tvMessage:   TextView = view.findViewById(R.id.tvCallMessage)
         val tvDetail:    TextView = view.findViewById(R.id.tvCallDetail)
         val tvCountdown: TextView = view.findViewById(R.id.tvCallTime)
@@ -41,15 +42,18 @@ class ActiveCallsAdapter(
         val alert   = items[position]
         val loading = alert.labelCode in inProgress
 
+        holder.tvPosition.text = "CALL ${position + 1}"
         holder.tvMessage.text = alert.message
-        holder.tvDetail.text  = if (alert.labelCode.isNotBlank())
-            "Label: ${alert.labelCode}" else alert.companyCode
+        holder.tvDetail.text = listOfNotNull(
+            alert.companyCode.takeIf { it.isNotBlank() }?.let { "Company $it" },
+            alert.labelCode.takeIf { it.isNotBlank() }?.let { "Label $it" },
+        ).joinToString("  •  ")
 
         bindCountdown(holder, alert)
 
         holder.btnOnMyWay.isEnabled = !loading
         holder.btnDismiss.isEnabled = !loading
-        holder.btnOnMyWay.text      = if (loading) "Sending…" else "On My Way"
+        holder.btnOnMyWay.text      = if (loading) "Confirming..." else "I'm on my way"
 
         holder.btnOnMyWay.setOnClickListener {
             if (!loading) {
@@ -114,7 +118,7 @@ class ActiveCallsAdapter(
             holder.tvCountdown.setTextColor(0xFFC62828.toInt())
         } else {
             val secs = (remaining / 1_000).toInt()
-            holder.tvCountdown.text = "⏱ ${secs}s"
+            holder.tvCountdown.text = "$secs sec left"
             holder.tvCountdown.setTextColor(when {
                 secs <= 10 -> 0xFFC62828.toInt()   // red
                 secs <= 20 -> 0xFFE65100.toInt()   // deep orange

@@ -13,8 +13,8 @@ import java.util.UUID
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val ALERT_CHANNEL_ID        = "esl_alert_channel_v3"  // IMPORTANCE_HIGH — real incoming alerts only
-        const val STATUS_CHANNEL_ID       = "esl_status_channel"   // IMPORTANCE_DEFAULT — ongoing badge/status, no heads-up
+        const val ALERT_CHANNEL_ID        = "esl_alert_channel_v4"
+        const val STATUS_CHANNEL_ID       = "esl_status_channel"
         const val ALERT_NOTIFICATION_ID   = 1002   // fallback only
         const val GROUPED_NOTIFICATION_ID = 998    // used when 2+ alerts active
         const val TAG                     = "FCMService"
@@ -22,6 +22,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         const val ACTION_SWITCH_TO_LIST   = "com.eslcall.app.SWITCH_TO_LIST"
         const val ACTION_ACTIVE_LIST_CHANGED = "com.eslcall.app.ACTIVE_LIST_CHANGED"
         const val EXTRA_CANCEL_LABEL_CODE = "cancel_label_code"
+        const val EXTRA_CANCEL_CLAIMED_BY = "cancel_claimed_by"
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -30,16 +31,51 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         if (data["type"] == "cancel") {
             val labelCode = data["labelCode"] ?: ""
+            val claimedBy = data["claimedBy"].orEmpty()
             Log.d(TAG, "FCM cancel for: $labelCode")
+            val alreadyConfirmedHere = AcknowledgedStore.isAcknowledged(this, labelCode)
+            val acceptedByCurrentAssociate = claimedBy.isNotBlank() &&
+                claimedBy.equals(Session.username(this), ignoreCase = true)
+            val handledHere = alreadyConfirmedHere || acceptedByCurrentAssociate
+            val queued = AlertQueueStore.loadAll(this).firstOrNull { it.labelCode == labelCode }
+            val previous = AlertHistoryStore.load(this).firstOrNull { it.labelCode == labelCode }
+            AlertHistoryStore.removeByLabelCode(this, labelCode)
+            val sourceMessage = queued?.message ?: previous?.message
+            if (!handledHere && sourceMessage != null) {
+                    AlertHistoryStore.save(this, AlertHistoryItem(
+                        message = sourceMessage,
+                        companyCode = queued?.companyCode ?: previous?.companyCode.orEmpty(),
+                        labelCode = labelCode,
+                        timestamp = System.currentTimeMillis(),
+                        status = AlertStatus.HANDLED_BY_OTHER,
+                        handledBy = claimedBy.takeIf { it.isNotBlank() },
+                    ))
+            } else if (acceptedByCurrentAssociate && !alreadyConfirmedHere && sourceMessage != null) {
+                AlertHistoryStore.save(this, AlertHistoryItem(
+                    message = sourceMessage,
+                    companyCode = queued?.companyCode ?: previous?.companyCode.orEmpty(),
+                    labelCode = labelCode,
+                    timestamp = System.currentTimeMillis(),
+                    status = AlertStatus.ACKNOWLEDGED,
+                    handledBy = claimedBy,
+                ))
+            }
             AcknowledgedStore.markAcknowledged(this, labelCode)
             AlertQueueStore.removeByLabelCode(this, labelCode)
-            // Remove any MISSED entry that was saved before this cancel arrived
-            AlertHistoryStore.removeByLabelCode(this, labelCode)
-            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                .cancel(notificationIdFor(labelCode))
+            val notificationManager =
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(notificationIdFor(labelCode))
+            val remainingAlerts = AlertQueueStore.loadAll(this)
+            if (remainingAlerts.isEmpty() || AppForegroundTracker.isInForeground) {
+                notificationManager.cancel(GROUPED_NOTIFICATION_ID)
+            } else {
+                ensureStatusChannel()
+                postGroupedNotification(notificationManager, remainingAlerts, alerting = false)
+            }
             sendBroadcast(Intent(ACTION_CANCEL_ALERT).apply {
                 setPackage(packageName)
                 putExtra(EXTRA_CANCEL_LABEL_CODE, labelCode)
+                putExtra(EXTRA_CANCEL_CLAIMED_BY, claimedBy)
             })
             sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED).setPackage(packageName))
             return
@@ -81,7 +117,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         sendBroadcast(Intent(ACTION_ACTIVE_LIST_CHANGED).setPackage(packageName))
 
         if (queueSize == 1) {
-            // ── Single alert: full-screen popup + individual notification ──────
             val alertIntent = Intent(this, AlertActivity::class.java).apply {
                 putExtra(AlertActivity.EXTRA_MESSAGE,         message)
                 putExtra(AlertActivity.EXTRA_COMPANY_CODE,    companyCode)
@@ -91,23 +126,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
-            val fullScreenPI = PendingIntent.getActivity(
-                this, notifId, alertIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val builder = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setColor(0xFF2F006D.toInt())
-                .setContentTitle("Employee Call")
-                .setContentText(message)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                .setContentIntent(fullScreenPI)
-                .setNumber(1)
-                .setAutoCancel(true)
             if (appForeground) {
-                // App is visible — activity launched directly, no banner needed
-                builder.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                // The alert screen is already the notification while the app is visible.
+                // Do not also post a high-importance banner for the same call.
+                nm.cancel(notifId)
+                startActivity(alertIntent)
             } else {
+                val fullScreenPI = PendingIntent.getActivity(
+                    this, notifId, alertIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
                 val onMyWayIntent = Intent(this, OnMyWayReceiver::class.java).apply {
                     action = OnMyWayReceiver.ACTION_ON_MY_WAY
                     putExtra(OnMyWayReceiver.EXTRA_COMPANY_CODE, companyCode)
@@ -118,48 +146,83 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     this, notifId, onMyWayIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                builder.setPriority(NotificationCompat.PRIORITY_MAX)
+                val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setColor(0xFF2F006D.toInt())
+                    .setContentTitle("Employee Call")
+                    .setContentText(message)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                    .setContentIntent(fullScreenPI)
+                    .setNumber(1)
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .setFullScreenIntent(fullScreenPI, true)
-                    .addAction(android.R.drawable.ic_menu_directions, "On My Way", onMyWayPI)
+                    .addAction(android.R.drawable.ic_menu_directions, "I'm on my way", onMyWayPI)
+                    .build()
+                nm.notify(notifId, notification)
             }
-            nm.notify(notifId, builder.build())
-            if (appForeground) startActivity(alertIntent)
 
         } else {
-            // ── Multiple alerts: cancel all individuals, show grouped ──────────
             AlertQueueStore.loadAll(this).forEach { nm.cancel(it.notificationId) }
-
-            val allAlerts  = AlertQueueStore.loadAll(this)
-            val inboxStyle = NotificationCompat.InboxStyle()
-                .setBigContentTitle("$queueSize Active Employee Calls")
-            allAlerts.forEach { inboxStyle.addLine(it.message) }
-
-            val activeCallsPI = PendingIntent.getActivity(
-                this, 0,
-                Intent(this, ActiveCallsActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            // Use STATUS_CHANNEL_ID (IMPORTANCE_DEFAULT) — this notification lives in the
-            // shade as a badge carrier only; it must never pop up as a heads-up banner.
-            val grouped = NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setColor(0xFF2F006D.toInt())
-                .setContentTitle("$queueSize Active Employee Calls")
-                .setContentText("Tap to view and respond")
-                .setStyle(inboxStyle)
-                .setContentIntent(activeCallsPI)
-                .setNumber(queueSize)
-                .setAutoCancel(false)
-                .setOngoing(true)
-                .build()
-            nm.notify(GROUPED_NOTIFICATION_ID, grouped)
-
-            // Tell AlertActivity (if open) to transition to the list screen
-            sendBroadcast(Intent(ACTION_SWITCH_TO_LIST).setPackage(packageName))
+            val allAlerts = AlertQueueStore.loadAll(this)
+            if (appForeground) {
+                nm.cancel(GROUPED_NOTIFICATION_ID)
+                startActivity(Intent(this, ActiveCallsActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                })
+            } else {
+                postGroupedNotification(nm, allAlerts, alerting = true)
+            }
         }
+    }
+
+    private fun postGroupedNotification(
+        notificationManager: NotificationManager,
+        alerts: List<PendingAlert>,
+        alerting: Boolean,
+    ) {
+        if (alerts.isEmpty()) {
+            notificationManager.cancel(GROUPED_NOTIFICATION_ID)
+            return
+        }
+        val count = alerts.size
+        val inboxStyle = NotificationCompat.InboxStyle()
+            .setBigContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
+        alerts.forEach { inboxStyle.addLine(it.message) }
+        val activeCallsPI = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, ActiveCallsActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val channel = if (alerting) ALERT_CHANNEL_ID else STATUS_CHANNEL_ID
+        val builder = NotificationCompat.Builder(this, channel)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF2F006D.toInt())
+            .setContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
+            .setContentText("Tap to view and respond")
+            .setStyle(inboxStyle)
+            .setContentIntent(activeCallsPI)
+            .setNumber(count)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(!alerting)
+        if (alerting) {
+            builder.setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+        }
+        val remainingMs = alerts.maxOf {
+            DeviceSettings.alertTimeoutMs(this) - (System.currentTimeMillis() - it.receivedAt)
+        }
+        if (remainingMs > 0) builder.setTimeoutAfter(remainingMs)
+        notificationManager.notify(GROUPED_NOTIFICATION_ID, builder.build())
     }
 
     private fun ensureStatusChannel() {
@@ -176,12 +239,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun ensureAlertChannel() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(ALERT_CHANNEL_ID) != null) return
-        // Sound is intentionally null — AlertActivity plays and controls the
-        // ringtone programmatically so it can be stopped after 30 s or on response.
-        // Vibration still fires immediately when the notification arrives.
+        val ringtoneUri = android.media.RingtoneManager.getDefaultUri(
+            android.media.RingtoneManager.TYPE_RINGTONE,
+        )
+        val audioAttributes = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
         NotificationChannel(ALERT_CHANNEL_ID, "Employee Call Alerts",
             NotificationManager.IMPORTANCE_HIGH).apply {
-            setSound(null, null)
+            setSound(ringtoneUri, audioAttributes)
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 400, 150, 400, 150, 800)
             enableLights(true)

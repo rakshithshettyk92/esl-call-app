@@ -7,16 +7,17 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class HistoryAdapter(private val items: List<AlertHistoryItem>) :
+class HistoryAdapter(private var items: List<AlertHistoryItem>) :
     RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val viewIconBg:  View     = view.findViewById(R.id.viewIconBg)
-        val tvIcon:      TextView = view.findViewById(R.id.tvStatusIcon)
-        val tvMessage:   TextView = view.findViewById(R.id.tvItemMessage)
-        val tvStatus:    TextView = view.findViewById(R.id.tvItemStatus)
-        val tvDay:       TextView = view.findViewById(R.id.tvItemDay)
-        val tvTime:      TextView = view.findViewById(R.id.tvItemTime)
+        val viewIconBg: View = view.findViewById(R.id.viewIconBg)
+        val tvIcon: TextView = view.findViewById(R.id.tvStatusIcon)
+        val tvMessage: TextView = view.findViewById(R.id.tvItemMessage)
+        val tvStatus: TextView = view.findViewById(R.id.tvItemStatus)
+        val tvContext: TextView = view.findViewById(R.id.tvItemContext)
+        val tvDay: TextView = view.findViewById(R.id.tvItemDay)
+        val tvTime: TextView = view.findViewById(R.id.tvItemTime)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,36 +29,49 @@ class HistoryAdapter(private val items: List<AlertHistoryItem>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.tvMessage.text = item.message
-        holder.tvDay.text     = item.relativeDay()
-        holder.tvTime.text    = item.formattedTimeOnly()
+        holder.tvDay.text = item.relativeDay()
+        holder.tvTime.text = item.formattedTimeOnly()
+        holder.tvContext.text = listOf(item.companyCode, item.labelCode)
+            .filter { it.isNotBlank() }
+            .joinToString("  /  ")
+        holder.tvContext.visibility = if (holder.tvContext.text.isBlank()) View.GONE else View.VISIBLE
 
         when (item.status) {
-            AlertStatus.ACKNOWLEDGED -> {
-                holder.tvIcon.text       = "✓"
-                holder.tvIcon.setTextColor(Color.parseColor("#00897B"))
-                holder.viewIconBg.setBackgroundResource(R.drawable.shape_circle_green)
-                holder.viewIconBg.alpha  = 0.15f
-                holder.tvStatus.text     = "On My Way"
-                holder.tvStatus.setTextColor(Color.parseColor("#00897B"))
-            }
-            AlertStatus.DISMISSED -> {
-                holder.tvIcon.text       = "✕"
-                holder.tvIcon.setTextColor(Color.parseColor("#757575"))
-                holder.viewIconBg.setBackgroundResource(R.drawable.shape_circle_green)
-                holder.viewIconBg.alpha  = 0.08f
-                holder.tvStatus.text     = "Dismissed"
-                holder.tvStatus.setTextColor(Color.parseColor("#9E9E9E"))
-            }
-            AlertStatus.MISSED -> {
-                holder.tvIcon.text       = "⏱"
-                holder.tvIcon.setTextColor(Color.parseColor("#E65100"))
-                holder.viewIconBg.setBackgroundResource(R.drawable.shape_circle_green)
-                holder.viewIconBg.alpha  = 0.10f
-                holder.tvStatus.text     = "Missed / Timed out"
-                holder.tvStatus.setTextColor(Color.parseColor("#E65100"))
-            }
+            AlertStatus.ACKNOWLEDGED -> bindStatus(
+                holder,
+                "\u2713",
+                item.handledBy?.let { "Attended by you - $it" } ?: "Attended by you",
+                "#00897B",
+                R.drawable.shape_status_attended,
+            )
+            AlertStatus.HANDLED_BY_OTHER -> bindStatus(
+                holder,
+                "\u2192",
+                item.handledBy?.let { "Attended by $it" } ?: "Attended by another associate",
+                "#5E35B1",
+                R.drawable.shape_status_other,
+            )
+            AlertStatus.DISMISSED -> bindStatus(
+                holder, "\u00D7", "Not taken on this device", "#616161", R.drawable.shape_status_dismissed)
+            AlertStatus.MISSED -> bindStatus(
+                holder, "!", "Missed - response time expired", "#E65100", R.drawable.shape_status_missed)
         }
     }
 
+    private fun bindStatus(holder: ViewHolder, icon: String, label: String, color: String, background: Int) {
+        val parsedColor = Color.parseColor(color)
+        holder.tvIcon.text = icon
+        holder.tvIcon.setTextColor(parsedColor)
+        holder.viewIconBg.setBackgroundResource(background)
+        holder.viewIconBg.alpha = 1f
+        holder.tvStatus.text = label
+        holder.tvStatus.setTextColor(parsedColor)
+    }
+
     override fun getItemCount() = items.size
+
+    fun submitItems(updated: List<AlertHistoryItem>) {
+        items = updated
+        notifyDataSetChanged()
+    }
 }

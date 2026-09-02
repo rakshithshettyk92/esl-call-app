@@ -34,12 +34,12 @@ object DeviceSettings {
         sessionTimeoutHours(context).takeIf { it > 0 }?.times(60L * 60L * 1_000L)
 
     fun sessionTimeoutLabel(hours: Int): String = when (hours) {
-        0 -> "Never (recommended)"
-        1 -> "1 hour"
-        2 -> "2 hours"
-        12 -> "12 hours"
-        24 -> "24 hours"
-        else -> "Never (recommended)"
+        0 -> "Never - recommended for demos"
+        1 -> "After 1 hour - sign in again"
+        2 -> "After 2 hours - sign in again"
+        12 -> "After 12 hours - sign in again"
+        24 -> "After 24 hours - sign in again"
+        else -> "Never - recommended for demos"
     }
 
     fun save(

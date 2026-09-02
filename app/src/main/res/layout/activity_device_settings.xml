@@ -13,50 +13,61 @@
         android:background="@color/primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:title="Device alert settings"
+        app:subtitle="Applies only to this device"
+        app:subtitleTextColor="#CEB8E8"
+        app:title="Device Settings"
         app:titleTextColor="@color/white" />
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="@dimen/screen_horizontal_padding"
+            android:paddingTop="@dimen/screen_vertical_padding"
+            android:paddingEnd="@dimen/screen_horizontal_padding"
+            android:paddingBottom="32dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/soft_surface"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="These options change how this phone or tablet behaves. They do not change another associate's device or AIMS account."
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:text="Tune alert behavior on this phone without rebuilding the app."
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp" />
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="10dp"
+                android:text="Incoming call behavior"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Call response window (seconds)"
-                app:helperText="15–600 seconds">
+                android:hint="Time allowed to respond (seconds)"
+                app:helperText="Recommended: 60. After this time an unanswered call is recorded as Missed.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAlertTimeout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Relay health check interval (seconds)"
-                app:helperText="30–3600 seconds">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAuthPollInterval"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="number" />
@@ -66,17 +77,36 @@
                 android:id="@+id/switchKeepScreenOn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:minHeight="48dp"
-                android:text="Keep the Ready screen awake" />
+                android:layout_marginTop="16dp"
+                android:minHeight="56dp"
+                android:text="Keep the Ready screen awake"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Useful for a shared demo tablet. It may use more battery."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:layout_marginBottom="10dp"
+                android:text="Session and connectivity"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:hint="Automatic device sign-out"
-                app:helperText="Local to this phone; never signs out other devices">
+                android:hint="Sign out this device automatically"
+                app:helperText="Never is recommended for demos. A timed option requires this associate to enter AIMS credentials again after expiry.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/dropdownSessionTimeout"
@@ -85,12 +115,37 @@
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Server health check interval (seconds)"
+                app:helperText="Recommended: 300 (5 minutes). Lower values detect outages sooner but use more network and battery.">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etAuthPollInterval"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <Button
-                android:id="@+id/btnSaveDeviceSettings"
+                android:id="@+id/btnRestoreRecommended"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="24dp"
-                android:text="Save settings" />
+                android:text="Restore recommended values" />
+
+            <Button
+                android:id="@+id/btnSaveDeviceSettings"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="@color/primary"
+                android:text="Save device settings"
+                android:textColor="@color/white" />
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

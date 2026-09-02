@@ -21,6 +21,7 @@ object AlertHistoryStore {
             put("labelCode",   item.labelCode)
             put("timestamp",   item.timestamp)
             put("status",      item.status.name)
+            put("handledBy",   item.handledBy ?: "")
         }
 
         // Insert newest first, cap at MAX_ITEMS
@@ -76,7 +77,8 @@ object AlertHistoryStore {
                 timestamp   = obj.optLong("timestamp",     0L),
                 status      = runCatching {
                     AlertStatus.valueOf(obj.optString("status", "ACKNOWLEDGED"))
-                }.getOrDefault(AlertStatus.ACKNOWLEDGED)
+                }.getOrDefault(AlertStatus.ACKNOWLEDGED),
+                handledBy   = obj.optString("handledBy").takeIf { it.isNotBlank() },
             )
         }
     }

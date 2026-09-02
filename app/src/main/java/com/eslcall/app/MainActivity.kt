@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) Toast.makeText(this,
-                "Notifications disabled — alerts won't appear", Toast.LENGTH_LONG).show()
+                "Notifications are disabled. Calls will not appear.", Toast.LENGTH_LONG).show()
         }
 
     // Views
@@ -110,8 +110,10 @@ class MainActivity : AppCompatActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        findViewById<View>(R.id.mainHeader).applyStatusBarInset()
 
         bindViews()
+        applyResponsiveActionLayout()
         askNotificationPermission()
 
         btnLogin.setOnClickListener  { attemptLogin() }
@@ -137,24 +139,25 @@ class MainActivity : AppCompatActivity() {
         }
         btnDeliverySettings.setOnClickListener { openAlertDeliverySettings() }
         btnSwitchStore.setOnClickListener {
-            Session.clearStore(this)
             startActivity(Intent(this, StoreSelectionActivity::class.java))
         }
         btnTestAlert.setOnClickListener {
-            // AlertActivity is queue-driven; the bare EXTRA_MESSAGE intent
-            // would just be ignored. Enqueue a fake alert and let the normal
-            // pipeline render it. Blank company/label means "On My Way" will
-            // dismiss locally without calling the relay.
+            val previewLabel = "PREVIEW-${java.util.UUID.randomUUID().toString().take(8)}"
             AlertQueueStore.enqueue(this, PendingAlert(
                 id             = java.util.UUID.randomUUID().toString(),
                 callId         = "",
-                message        = "Test — Shelf A3, Aisle 2",
+                message        = "Preview: Shelf A3, Aisle 2",
                 companyCode    = "",
-                labelCode      = "",
+                labelCode      = previewLabel,
                 receivedAt     = System.currentTimeMillis(),
-                notificationId = MyFirebaseMessagingService.ALERT_NOTIFICATION_ID,
+                notificationId = notificationIdFor(previewLabel),
             ))
-            startActivity(Intent(this, AlertActivity::class.java).apply {
+            val destination = if (AlertQueueStore.size(this) > 1) {
+                ActiveCallsActivity::class.java
+            } else {
+                AlertActivity::class.java
+            }
+            startActivity(Intent(this, destination).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             })
         }
@@ -340,7 +343,7 @@ class MainActivity : AppCompatActivity() {
         layoutReady.visibility = View.VISIBLE
         tvReadyUser.text       = username
         tvUserAvatar.text      = username.first().uppercaseChar().toString()
-        tvStatus.text          = "Ready — Listening for calls"
+        tvStatus.text          = "Ready for employee calls"
         val store = Session.storeName(this) ?: Session.storeCode(this).orEmpty()
         val co    = Session.companyCode(this).orEmpty()
         tvCurrentStore.text    = if (store.isNotEmpty()) "$co • $store" else co
@@ -618,6 +621,26 @@ class MainActivity : AppCompatActivity() {
         layoutDeliveryBanner = findViewById(R.id.layoutDeliveryBanner)
         tvDeliveryBannerMessage = findViewById(R.id.tvDeliveryBannerMessage)
         btnDeliverySettings = findViewById(R.id.btnDeliverySettings)
+    }
+
+    private fun applyResponsiveActionLayout() {
+        val actions = findViewById<LinearLayout>(R.id.layoutStoreActions)
+        val compact = resources.configuration.screenWidthDp <= 420 ||
+            resources.configuration.fontScale >= 1.2f
+        val buttonHeight = (48 * resources.displayMetrics.density).toInt()
+        val gap = (10 * resources.displayMetrics.density).toInt()
+
+        if (compact) {
+            actions.orientation = LinearLayout.VERTICAL
+            btnSwitchStore.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                buttonHeight,
+            ).apply { bottomMargin = gap }
+            btnAdmin.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                buttonHeight,
+            )
+        }
     }
 
     private fun askNotificationPermission() {

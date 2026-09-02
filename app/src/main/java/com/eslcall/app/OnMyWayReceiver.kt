@@ -22,7 +22,8 @@ class OnMyWayReceiver : BroadcastReceiver() {
         if (company.isBlank() || store.isBlank() || label.isBlank()) return
 
         AcknowledgeWorker.enqueue(context, company, store, label, callId)
-        Toast.makeText(context, "Sending responseâ€¦", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Response queued - confirming with the store...",
+            Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -43,6 +43,7 @@ class FieldMappingActivity : AppCompatActivity() {
         setContentView(R.layout.activity_field_mapping)
 
         toolbar               = findViewById(R.id.toolbar)
+        toolbar.applyStatusBarInset()
         tvScope               = findViewById(R.id.tvScope)
         progress              = findViewById(R.id.progress)
         articleIdInput        = findViewById(R.id.articleIdInput)
@@ -135,8 +136,20 @@ class FieldMappingActivity : AppCompatActivity() {
     private fun save() {
         val mapping = current()
         if (!mapping.isComplete()) {
-            showError("Fill in the required fields")
+            showError("Complete every required field and use a reset delay from 5 to 600 seconds.")
             return
+        }
+        if (columns.isNotEmpty()) {
+            val selectedColumns = listOf(
+                "Article ID" to mapping.articleIdField,
+                "Display name" to mapping.articleNameField,
+                "Eligibility" to mapping.helpEnabledField,
+            ) + listOfNotNull(mapping.aisleField?.let { "Aisle or location" to it })
+            val unknown = selectedColumns.firstOrNull { (_, value) -> value !in columns }
+            if (unknown != null) {
+                showError("${unknown.first} column '${unknown.second}' is not in the current AIMS article format. Choose a value from the dropdown.")
+                return
+            }
         }
         btnSave.isEnabled   = false
         progress.visibility = View.VISIBLE
@@ -147,7 +160,9 @@ class FieldMappingActivity : AppCompatActivity() {
                 RelayApi.saveFieldMapping(company, store, mapping)
                 runOnUiThread {
                     progress.visibility = View.GONE
-                    Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this,
+                        "Call rules saved. New button presses use them immediately.",
+                        Toast.LENGTH_LONG).show()
                     finish()
                 }
             } catch (e: Exception) {

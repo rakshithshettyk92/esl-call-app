@@ -10,13 +10,14 @@
     <!-- SOLUM branded header                                              -->
     <!-- ================================================================ -->
     <LinearLayout
+        android:id="@+id/mainHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@color/primary"
         android:paddingStart="20dp"
         android:paddingEnd="24dp"
-        android:paddingTop="40dp"
+        android:paddingTop="16dp"
         android:paddingBottom="22dp"
         android:gravity="center_vertical">
 
@@ -34,20 +35,19 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SOLUM"
-                android:textSize="10sp"
-                android:letterSpacing="0.25"
-                android:textColor="#FFCD00"
-                android:textAllCaps="true" />
+            <ImageView
+                android:layout_width="118dp"
+                android:layout_height="28dp"
+                android:adjustViewBounds="false"
+                android:contentDescription="SOLUM"
+                android:scaleType="centerCrop"
+                android:src="@drawable/solum_wordmark_reversed" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Employee Call"
-                android:textSize="26sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:textColor="@color/white" />
 
@@ -74,7 +74,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="@dimen/screen_horizontal_padding"
+            android:paddingTop="@dimen/screen_vertical_padding"
+            android:paddingEnd="@dimen/screen_horizontal_padding"
+            android:paddingBottom="28dp">
 
             <!-- ============================================================ -->
             <!-- LOGIN section                                                 -->
@@ -89,11 +92,19 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="20dp"
-                    android:text="Sign in to AIMS"
+                    android:layout_marginBottom="6dp"
+                    android:text="Sign in to Employee Call"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:text="Use your own AIMS username and password. Your password is used only to sign in and is not stored on this device or the relay."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
 
                 <!-- Username -->
                 <TextView
@@ -109,6 +120,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:hint="Enter username or email"
+                    android:autofillHints="username"
                     android:inputType="textEmailAddress"
                     android:background="@drawable/card_background"
                     android:paddingStart="14dp"
@@ -136,6 +148,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:hint="Enter password"
+                        android:autofillHints="password"
                         android:inputType="textPassword"
                         android:background="@drawable/card_background"
                         android:paddingStart="14dp"
@@ -275,7 +288,7 @@
                                     android:id="@+id/tvStatus"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Ready — Listening for calls"
+                                    android:text="Ready for employee calls"
                                     android:textSize="16sp"
                                     android:textStyle="bold"
                                     android:textColor="@color/green" />
@@ -426,7 +439,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Configure product fields for this store to start receiving alerts."
+                                android:text="Configure this store's call rules so eligible button presses can reach associates."
                                 android:textSize="12sp"
                                 android:textColor="@color/text_primary"
                                 android:layout_marginTop="2dp" />
@@ -464,8 +477,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="LAST ALERT"
-                            android:textSize="10sp"
+                            android:text="MOST RECENT CALL"
+                            android:textSize="11sp"
                             android:textColor="@color/text_secondary"
                             android:textAllCaps="true"
                             android:letterSpacing="0.10"
@@ -565,7 +578,7 @@
                         android:id="@+id/btnRespondNow"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="Respond Now"
+                        android:text="View and respond"
                         android:backgroundTint="#C62828" />
 
                 </LinearLayout>
@@ -576,7 +589,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginBottom="10dp"
-                    android:text="Alert History"
+                    android:text="Call history"
                     style="@style/Widget.Material3.Button.OutlinedButton" />
 
                 <Button
@@ -584,10 +597,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginBottom="10dp"
-                    android:text="Test Alert Popup"
+                    android:text="Preview alert"
                     android:backgroundTint="@color/primary" />
 
                 <LinearLayout
+                    android:id="@+id/layoutStoreActions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -608,7 +622,7 @@
                         android:layout_height="48dp"
                         android:layout_weight="1"
                         android:layout_marginStart="6dp"
-                        android:text="Admin"
+                        android:text="Settings &amp; insights"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
                 </LinearLayout>
 

@@ -3,20 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/primary"
-        app:title="Product Field Mapping"
-        app:titleTextColor="@color/white"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/white" />
+        app:navigationIconTint="@color/white"
+        app:subtitle="Controls which button presses become calls"
+        app:subtitleTextColor="#CEB8E8"
+        app:title="Call Rules"
+        app:titleTextColor="@color/white" />
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -26,38 +28,89 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="@dimen/screen_horizontal_padding"
+            android:paddingTop="@dimen/screen_vertical_padding"
+            android:paddingEnd="@dimen/screen_horizontal_padding"
+            android:paddingBottom="32dp">
 
             <TextView
                 android:id="@+id/tvScope"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:textColor="@color/primary"
                 android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
+                android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:text="Map the article columns the relay should read for each call."
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#F1ECF8"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#D5C8E7"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="How a button press becomes a call"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="1. The relay finds the article attached to the label.&#10;2. The eligibility field must equal the enabled value.&#10;3. Eligible calls are sent to every registered device in this store."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="If the field is missing or has another value, the press is intentionally skipped. The reason appears in Employee Call Operation logs."
+                        android:textColor="#8A4F00"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/progress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:indeterminate="true"
                 android:visibility="gone"
                 app:indicatorColor="@color/primary" />
 
-            <!-- Article ID -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="10dp"
+                android:text="Article information"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Article ID field"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                android:hint="Article ID column"
+                app:helperText="Column containing the article identifier sent by the button press">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/articleIdInput"
@@ -66,13 +119,13 @@
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Article Name -->
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Article name field"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                android:layout_marginTop="14dp"
+                android:hint="Display name column"
+                app:helperText="Friendly product or location name shown in the call">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/articleNameInput"
@@ -81,13 +134,22 @@
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Help-enabled field -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="10dp"
+                android:text="Call eligibility"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Help-enabled field"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                android:hint="Eligibility column"
+                app:helperText="Example: EMPLOYEE_CALL. Blank or mismatched values are skipped.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/helpEnabledFieldInput"
@@ -96,29 +158,38 @@
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Help-enabled value -->
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Help-enabled value (e.g. Y)"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                android:layout_marginTop="14dp"
+                android:hint="Enabled value"
+                app:helperText="Exact value that allows a call, for example YES or Y">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/helpEnabledValueInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:imeOptions="actionNext" />
+                    android:imeOptions="actionNext"
+                    android:inputType="textCapCharacters" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Aisle (optional) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="10dp"
+                android:text="Call display and shelf response"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Aisle info field (optional)"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                android:hint="Aisle or location column (optional)"
+                app:helperText="Included in the alert so the associate knows where to go">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/aisleInput"
@@ -127,29 +198,27 @@
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Revert delay -->
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Revert page delay (seconds, 5–600)"
-                app:helperText="How long the ESL tag stays on page 2 after On-My-Way before flipping back"
-                app:helperTextEnabled="true"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                android:layout_marginTop="14dp"
+                android:hint="Shelf page reset delay (seconds)"
+                app:helperText="5-600 seconds. After acceptance, page 2 stays visible for this long before returning to page 1.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/revertDelayInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:imeOptions="actionDone" />
+                    android:imeOptions="actionDone"
+                    android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
                 android:id="@+id/tvError"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="14dp"
                 android:textColor="#C62828"
                 android:textSize="13sp"
                 android:visibility="gone" />
@@ -157,13 +226,12 @@
             <Button
                 android:id="@+id/btnSave"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="56dp"
                 android:layout_marginTop="24dp"
-                android:text="Save"
-                android:enabled="false"
                 android:backgroundTint="@color/primary"
+                android:enabled="false"
+                android:text="Save call rules"
                 android:textColor="@color/white" />
-
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

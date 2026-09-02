@@ -27,18 +27,20 @@ class AcknowledgeWorker(context: Context, params: WorkerParameters) : CoroutineW
         if (company.isBlank() || store.isBlank() || label.isBlank()) return@withContext Result.failure()
 
         try {
-            RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, JSONObject().apply {
+            val response = RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, JSONObject().apply {
                 put("callId", callId)
                 put("companyCode", company)
                 put("storeCode", store)
                 put("labelCode", label)
             })
-            completeLocally(label, acknowledgedHere = true)
+            completeLocally(label, acknowledgedHere = true,
+                claimedBy = response.optString("claimedBy"))
             Result.success()
         } catch (e: RelayHttpException) {
             when {
                 e.statusCode == 409 -> {
-                    completeLocally(label, acknowledgedHere = false)
+                    completeLocally(label, acknowledgedHere = false,
+                        claimedBy = e.responseBody?.optString("claimedBy").orEmpty())
                     Result.success()
                 }
                 else -> Result.retry()
@@ -50,7 +52,7 @@ class AcknowledgeWorker(context: Context, params: WorkerParameters) : CoroutineW
         }
     }
 
-    private fun completeLocally(label: String, acknowledgedHere: Boolean) {
+    private fun completeLocally(label: String, acknowledgedHere: Boolean, claimedBy: String) {
         val alert = AlertQueueStore.loadAll(applicationContext).firstOrNull { it.labelCode == label }
         if (acknowledgedHere) {
             AcknowledgedStore.markAcknowledged(applicationContext, label)
@@ -58,8 +60,17 @@ class AcknowledgeWorker(context: Context, params: WorkerParameters) : CoroutineW
                 AlertHistoryStore.save(applicationContext, AlertHistoryItem(
                     alert.message, alert.companyCode, alert.labelCode,
                     System.currentTimeMillis(), AlertStatus.ACKNOWLEDGED,
+                    claimedBy.ifBlank { Session.username(applicationContext) },
                 ))
             }
+        } else if (alert != null) {
+            AcknowledgedStore.markAcknowledged(applicationContext, label)
+            AlertHistoryStore.removeByLabelCode(applicationContext, label)
+            AlertHistoryStore.save(applicationContext, AlertHistoryItem(
+                alert.message, alert.companyCode, alert.labelCode,
+                System.currentTimeMillis(), AlertStatus.HANDLED_BY_OTHER,
+                claimedBy.takeIf { it.isNotBlank() },
+            ))
         }
         AlertQueueStore.removeByLabelCode(applicationContext, label)
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -69,7 +80,13 @@ class AcknowledgeWorker(context: Context, params: WorkerParameters) : CoroutineW
         }
         applicationContext.sendBroadcast(Intent(MyFirebaseMessagingService.ACTION_CANCEL_ALERT)
             .setPackage(applicationContext.packageName)
-            .putExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE, label))
+            .putExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE, label)
+            .putExtra(
+                MyFirebaseMessagingService.EXTRA_CANCEL_CLAIMED_BY,
+                claimedBy.ifBlank {
+                    if (acknowledgedHere) Session.username(applicationContext).orEmpty() else ""
+                },
+            ))
         applicationContext.sendBroadcast(Intent(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED)
             .setPackage(applicationContext.packageName))
     }

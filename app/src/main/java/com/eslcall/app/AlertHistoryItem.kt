@@ -3,14 +3,15 @@ package com.eslcall.app
 import java.text.SimpleDateFormat
 import java.util.*
 
-enum class AlertStatus { ACKNOWLEDGED, DISMISSED, MISSED }
+enum class AlertStatus { ACKNOWLEDGED, HANDLED_BY_OTHER, DISMISSED, MISSED }
 
 data class AlertHistoryItem(
     val message:     String,
     val companyCode: String,
     val labelCode:   String,
     val timestamp:   Long,
-    val status:      AlertStatus = AlertStatus.ACKNOWLEDGED
+    val status:      AlertStatus = AlertStatus.ACKNOWLEDGED,
+    val handledBy:   String? = null,
 ) {
     fun formattedTimeOnly(): String =
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))

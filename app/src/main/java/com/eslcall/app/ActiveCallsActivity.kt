@@ -22,7 +22,7 @@ import org.json.JSONObject
 /**
  * Shows all currently active (un-acknowledged) alerts in a scrollable list.
  * Launched automatically when 2+ alerts are queued simultaneously.
- * Each item has individual "On My Way" and "Dismiss" buttons.
+ * Each item has individual "I'm on my way" and "Not taking" buttons.
  */
 class ActiveCallsActivity : AppCompatActivity() {
 
@@ -73,6 +73,7 @@ class ActiveCallsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_active_calls)
+        findViewById<View>(R.id.activeCallsHeader).applyStatusBarInset()
 
         tvSubtitle  = findViewById(R.id.tvActiveCallsSubtitle)
         layoutEmpty = findViewById(R.id.layoutActiveEmpty)
@@ -96,6 +97,7 @@ class ActiveCallsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
         ContextCompat.registerReceiver(
             this, refreshReceiver,
             IntentFilter(MyFirebaseMessagingService.ACTION_ACTIVE_LIST_CHANGED),
@@ -115,6 +117,9 @@ class ActiveCallsActivity : AppCompatActivity() {
         tickHandler.removeCallbacks(tickRunnable)
         unregisterReceiver(refreshReceiver)
         unregisterReceiver(cancelReceiver)
+        val activeAlerts = AlertQueueStore.loadAll(this)
+            .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
+        if (activeAlerts.isNotEmpty()) updateGroupedNotification(activeAlerts)
     }
 
     // -------------------------------------------------------------------------
@@ -142,8 +147,8 @@ class ActiveCallsActivity : AppCompatActivity() {
         val alerts = AlertQueueStore.loadAll(this)
             .filter { !AcknowledgedStore.isAcknowledged(this, it.labelCode) }
 
-        tvSubtitle.text = if (alerts.isEmpty()) "All handled"
-        else "${alerts.size} call${if (alerts.size > 1) "s" else ""} waiting for response"
+        tvSubtitle.text = if (alerts.isEmpty()) "All calls handled"
+        else "${alerts.size} active call${if (alerts.size > 1) "s" else ""} waiting"
 
         if (alerts.isEmpty()) {
             nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
@@ -152,11 +157,22 @@ class ActiveCallsActivity : AppCompatActivity() {
             recycler.visibility    = View.VISIBLE
             layoutEmpty.visibility = View.GONE
             adapter.updateItems(alerts)
-            updateGroupedNotification(alerts)
+            alerts.forEach { nm.cancel(it.notificationId) }
+            nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
         }
     }
 
     private fun updateGroupedNotification(alerts: List<PendingAlert>) {
+        if (nm.getNotificationChannel(MyFirebaseMessagingService.STATUS_CHANNEL_ID) == null) {
+            nm.createNotificationChannel(android.app.NotificationChannel(
+                MyFirebaseMessagingService.STATUS_CHANNEL_ID,
+                "Active Call Status",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+            })
+        }
         val count = alerts.size
         val style = androidx.core.app.NotificationCompat.InboxStyle()
             .setBigContentTitle("$count Active Employee Call${if (count > 1) "s" else ""}")
@@ -180,6 +196,11 @@ class ActiveCallsActivity : AppCompatActivity() {
             .setNumber(count)
             .setAutoCancel(false)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setTimeoutAfter(alerts.maxOf {
+                (DeviceSettings.alertTimeoutMs(this) -
+                    (System.currentTimeMillis() - it.receivedAt)).coerceAtLeast(1L)
+            })
             .build()
         nm.notify(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID, notif)
     }
@@ -189,6 +210,22 @@ class ActiveCallsActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     private fun acknowledgeAlert(alert: PendingAlert) {
+        if (alert.companyCode.isBlank() && alert.labelCode.startsWith("PREVIEW-")) {
+            AcknowledgedStore.markAcknowledged(this, alert.labelCode)
+            AlertHistoryStore.save(this, AlertHistoryItem(
+                message = alert.message,
+                companyCode = alert.companyCode,
+                labelCode = alert.labelCode,
+                timestamp = System.currentTimeMillis(),
+                status = AlertStatus.ACKNOWLEDGED,
+                handledBy = Session.username(this),
+            ))
+            AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+            nm.cancel(alert.notificationId)
+            Toast.makeText(this, "Preview response confirmed", Toast.LENGTH_SHORT).show()
+            refreshList()
+            return
+        }
         Thread {
             try {
                 val storeCode = Session.storeCode(this).orEmpty()
@@ -198,11 +235,11 @@ class ActiveCallsActivity : AppCompatActivity() {
                     put("storeCode",   storeCode)
                     put("labelCode",   alert.labelCode)
                 }
-                val code = try {
-                    RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
-                    200
+                val (code, claimedBy) = try {
+                    val response = RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
+                    200 to response.optString("claimedBy")
                 } catch (e: RelayHttpException) {
-                    e.statusCode
+                    e.statusCode to e.responseBody?.optString("claimedBy").orEmpty()
                 }
 
                 runOnUiThread {
@@ -214,24 +251,38 @@ class ActiveCallsActivity : AppCompatActivity() {
                                 companyCode = alert.companyCode,
                                 labelCode   = alert.labelCode,
                                 timestamp   = System.currentTimeMillis(),
-                                status      = AlertStatus.ACKNOWLEDGED
+                                status      = AlertStatus.ACKNOWLEDGED,
+                                handledBy   = claimedBy.ifBlank { Session.username(this) },
                             ))
                             AlertQueueStore.removeByLabelCode(this, alert.labelCode)
                             nm.cancel(alert.notificationId)
+                            Toast.makeText(this,
+                                "Response confirmed - this call is assigned to you",
+                                Toast.LENGTH_SHORT).show()
                             refreshList()
                         }
                         409 -> {
-                            // Already handled by another device
+                            AcknowledgedStore.markAcknowledged(this, alert.labelCode)
+                            AlertHistoryStore.removeByLabelCode(this, alert.labelCode)
+                            AlertHistoryStore.save(this, AlertHistoryItem(
+                                message = alert.message,
+                                companyCode = alert.companyCode,
+                                labelCode = alert.labelCode,
+                                timestamp = System.currentTimeMillis(),
+                                status = AlertStatus.HANDLED_BY_OTHER,
+                                handledBy = claimedBy.takeIf { it.isNotBlank() },
+                            ))
                             AlertQueueStore.removeByLabelCode(this, alert.labelCode)
                             refreshList()
                             Toast.makeText(this,
-                                "Already acknowledged by another device",
+                                if (claimedBy.isBlank()) "Attended by another associate"
+                                else "Attended by $claimedBy",
                                 Toast.LENGTH_SHORT).show()
                         }
                         else -> {
                             adapter.setItemIdle(alert.labelCode)
                             Toast.makeText(this,
-                                "Could not reach server — try again",
+                                "Could not reach server. Try again.",
                                 Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -239,7 +290,7 @@ class ActiveCallsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     adapter.setItemIdle(alert.labelCode)
-                    Toast.makeText(this, "Network error — try again", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Network error. Try again.", Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
@@ -270,6 +321,9 @@ class ActiveCallsActivity : AppCompatActivity() {
         ))
         AlertQueueStore.removeByLabelCode(this, alert.labelCode)
         nm.cancel(alert.notificationId)
+        Toast.makeText(this,
+            "Not taking this call. Other associates can still respond.",
+            Toast.LENGTH_SHORT).show()
         refreshList()
     }
 }

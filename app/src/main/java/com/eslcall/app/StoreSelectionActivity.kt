@@ -40,6 +40,7 @@ class StoreSelectionActivity : AppCompatActivity() {
         setContentView(R.layout.activity_store_selection)
 
         toolbar          = findViewById(R.id.toolbar)
+        toolbar.applyStatusBarInset()
         etCompany        = findViewById(R.id.etCompany)
         btnLoadStores    = findViewById(R.id.btnLoadStores)
         progress         = findViewById(R.id.progress)
@@ -54,10 +55,9 @@ class StoreSelectionActivity : AppCompatActivity() {
 
         // Back from this screen without picking a store = sign out locally, otherwise
         // MainActivity.onResume would just push the user back here (loop).
+        val hadStoreSelected = Session.hasStoreSelected(this)
         val exitWithLogout = Runnable {
-            Session.clear(this)
-            // Do not call the relay's global logout endpoint: its Solum session
-            // is shared by every enrolled phone.
+            if (!hadStoreSelected) Session.clear(this)
             finish()
         }
         toolbar.setNavigationOnClickListener { exitWithLogout.run() }
@@ -89,7 +89,7 @@ class StoreSelectionActivity : AppCompatActivity() {
     private fun loadStores() {
         val company = etCompany.text?.toString()?.trim().orEmpty().uppercase()
         if (company.isEmpty()) {
-            showError("Enter a company code")
+            showError("Enter the company code shown in AIMS")
             return
         }
 
@@ -113,7 +113,7 @@ class StoreSelectionActivity : AppCompatActivity() {
                     tvStoreCount.visibility = View.VISIBLE
                     progress.visibility     = View.GONE
                     btnLoadStores.isEnabled = true
-                    if (list.isEmpty()) showError("No stores found for $company")
+                    if (list.isEmpty()) showError("No stores were found for $company. Check the company code and your AIMS access.")
                 }
             } catch (e: Exception) {
                 runOnUiThread {

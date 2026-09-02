@@ -70,11 +70,13 @@ class AlertActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val cancelLabel = intent
                 ?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_LABEL_CODE) ?: ""
+            val claimedBy = intent
+                ?.getStringExtra(MyFirebaseMessagingService.EXTRA_CANCEL_CLAIMED_BY).orEmpty()
             when {
                 cancelLabel == currentLabelCode -> {
                     // Current alert was handled elsewhere
                     countDownTimer?.cancel()
-                    showAlreadyAcknowledged()
+                    showAlreadyAcknowledged(claimedBy)
                 }
                 cancelLabel.isNotBlank() -> {
                     // A queued (not yet shown) alert was handled elsewhere — remove it
@@ -171,10 +173,15 @@ class AlertActivity : AppCompatActivity() {
         currentNotifId    = alert.notificationId
         currentReceivedAt = alert.receivedAt
 
+        // Once the full-screen experience is visible, remove the originating
+        // notification so the same call is not shown twice.
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+            .cancel(alert.notificationId)
+
         findViewById<TextView>(R.id.tvAlertMessage).text = alert.message
 
         btnOnMyWay.isEnabled = true
-        btnOnMyWay.text      = "On My Way"
+        btnOnMyWay.text      = "I'm on my way"
         btnDismiss.isEnabled = true
 
         btnOnMyWay.setOnClickListener {
@@ -186,6 +193,8 @@ class AlertActivity : AppCompatActivity() {
             )
             if (alert.companyCode.isNotBlank() && alert.labelCode.isNotBlank()) {
                 triggerAcknowledge(alert.callId, alert.companyCode, alert.labelCode, alert.message)
+            } else if (alert.labelCode.startsWith("PREVIEW-")) {
+                completePreview(alert)
             } else {
                 dismissCurrent(AlertStatus.DISMISSED)
             }
@@ -217,6 +226,37 @@ class AlertActivity : AppCompatActivity() {
 
         countDownTimer?.cancel()
 
+        when (status) {
+            AlertStatus.MISSED -> Toast.makeText(this,
+                "Call missed - the response time expired", Toast.LENGTH_SHORT).show()
+            AlertStatus.DISMISSED -> Toast.makeText(this,
+                "Not taking this call. Other associates can still respond.",
+                Toast.LENGTH_SHORT).show()
+            else -> Unit
+        }
+
+        if (AlertQueueStore.size(this) > 0) {
+            showNextFromQueue()
+        } else {
+            cancelAllNotifications()
+            finish()
+        }
+    }
+
+    private fun completePreview(alert: PendingAlert) {
+        stopRingtone()
+        countDownTimer?.cancel()
+        AcknowledgedStore.markAcknowledged(this, alert.labelCode)
+        AlertHistoryStore.save(this, AlertHistoryItem(
+            message = alert.message,
+            companyCode = alert.companyCode,
+            labelCode = alert.labelCode,
+            timestamp = System.currentTimeMillis(),
+            status = AlertStatus.ACKNOWLEDGED,
+            handledBy = Session.username(this),
+        ))
+        AlertQueueStore.removeByLabelCode(this, alert.labelCode)
+        Toast.makeText(this, "Preview response confirmed", Toast.LENGTH_SHORT).show()
         if (AlertQueueStore.size(this) > 0) {
             showNextFromQueue()
         } else {
@@ -230,7 +270,7 @@ class AlertActivity : AppCompatActivity() {
         if (pending > 0) {
             layoutPendingBadge.visibility = View.VISIBLE
             tvPendingCount.text =
-                "⚡ $pending more alert${if (pending > 1) "s" else ""} waiting — handle this one first"
+                "$pending more call${if (pending > 1) "s" else ""} waiting. Opening the call list."
         } else {
             layoutPendingBadge.visibility = View.GONE
         }
@@ -253,7 +293,7 @@ class AlertActivity : AppCompatActivity() {
                 val secondsLeft = (millisUntilFinished / 1_000).toInt()
                 val progress    = (millisUntilFinished * 100 / autoDismissMs).toInt()
                 tvCountdown.text           = secondsLeft.toString()
-                tvAutoDismiss.text         = "Auto-closing in ${secondsLeft}s"
+                tvAutoDismiss.text         = "Recorded as missed in ${secondsLeft}s"
                 progressCountdown.progress = progress
             }
             override fun onFinish() {
@@ -269,7 +309,7 @@ class AlertActivity : AppCompatActivity() {
     private fun triggerAcknowledge(callId: String, companyCode: String, labelCode: String, message: String) {
         stopRingtone()
         btnOnMyWay.isEnabled = false
-        btnOnMyWay.text      = "Sending..."
+        btnOnMyWay.text      = "Confirming response..."
         btnDismiss.isEnabled = false
         countDownTimer?.cancel()
 
@@ -284,11 +324,11 @@ class AlertActivity : AppCompatActivity() {
                     put("storeCode",   storeCode)
                     put("labelCode",   labelCode)
                 }
-                val responseCode = try {
-                    RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
-                    200
+                val (responseCode, claimedBy) = try {
+                    val response = RelayApi.postJson(Constants.PATH_ESL_ACKNOWLEDGE, body)
+                    200 to response.optString("claimedBy")
                 } catch (e: RelayHttpException) {
-                    e.statusCode
+                    e.statusCode to e.responseBody?.optString("claimedBy").orEmpty()
                 }
 
                 runOnUiThread {
@@ -301,11 +341,13 @@ class AlertActivity : AppCompatActivity() {
                                     companyCode = companyCode,
                                     labelCode   = labelCode,
                                     timestamp   = System.currentTimeMillis(),
-                                    status      = AlertStatus.ACKNOWLEDGED
+                                    status      = AlertStatus.ACKNOWLEDGED,
+                                    handledBy   = claimedBy.ifBlank { Session.username(this) },
                                 )
                             )
                             AlertQueueStore.dequeue(this)
-                            btnOnMyWay.text = "On My Way ✓"
+                            btnOnMyWay.text = "Response confirmed"
+                            tvAutoDismiss.text = "This call is assigned to you. Closing..."
                             Handler(Looper.getMainLooper()).postDelayed({
                                 if (AlertQueueStore.size(this) > 0) {
                                     showNextFromQueue()
@@ -315,13 +357,13 @@ class AlertActivity : AppCompatActivity() {
                                 }
                             }, 1_500)
                         }
-                        409 -> showAlreadyAcknowledged()
+                        409 -> showAlreadyAcknowledged(claimedBy)
                         else -> {
                             btnOnMyWay.isEnabled = true
-                            btnOnMyWay.text      = "On My Way"
+                            btnOnMyWay.text      = "I'm on my way"
                             btnDismiss.isEnabled = true
                             restartCountdown()
-                            Toast.makeText(this, "Could not reach server — try again",
+                            Toast.makeText(this, "Could not reach server. Try again.",
                                 Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -329,10 +371,10 @@ class AlertActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     btnOnMyWay.isEnabled = true
-                    btnOnMyWay.text      = "On My Way"
+                    btnOnMyWay.text      = "I'm on my way"
                     btnDismiss.isEnabled = true
                     restartCountdown()
-                    Toast.makeText(this, "Could not reach server — try again",
+                    Toast.makeText(this, "Could not reach server. Try again.",
                         Toast.LENGTH_SHORT).show()
                 }
             }
@@ -343,16 +385,43 @@ class AlertActivity : AppCompatActivity() {
     // Already acknowledged (by another device or banner tap)
     // -------------------------------------------------------------------------
 
-    private fun showAlreadyAcknowledged() {
+    private fun showAlreadyAcknowledged(claimedBy: String = "") {
         stopRingtone()
+        val acceptedByCurrentAssociate = claimedBy.isNotBlank() &&
+            claimedBy.equals(Session.username(this), ignoreCase = true)
+        val alert = AlertQueueStore.peek(this)
+        if (alert != null) {
+            AcknowledgedStore.markAcknowledged(this, alert.labelCode)
+            AlertHistoryStore.removeByLabelCode(this, alert.labelCode)
+            AlertHistoryStore.save(this, AlertHistoryItem(
+                message = alert.message,
+                companyCode = alert.companyCode,
+                labelCode = alert.labelCode,
+                timestamp = System.currentTimeMillis(),
+                status = if (acceptedByCurrentAssociate) {
+                    AlertStatus.ACKNOWLEDGED
+                } else {
+                    AlertStatus.HANDLED_BY_OTHER
+                },
+                handledBy = claimedBy.takeIf { it.isNotBlank() },
+            ))
+        }
         btnOnMyWay.isEnabled = false
-        btnOnMyWay.text      = "Already Acknowledged"
+        btnOnMyWay.text = if (acceptedByCurrentAssociate) {
+            "Response confirmed"
+        } else {
+            "Already attended"
+        }
         btnDismiss.isEnabled = false
-        tvAutoDismiss.text   = "Acknowledged by another device — closing…"
+        tvAutoDismiss.text = when {
+            acceptedByCurrentAssociate -> "This call is assigned to you. Closing..."
+            claimedBy.isBlank() -> "Another associate accepted this call. Closing..."
+            else -> "Accepted by $claimedBy. Closing..."
+        }
         progressCountdown.progress = 0
 
         Handler(Looper.getMainLooper()).postDelayed({
-            // Remove from queue without saving to history (another device handled it)
+            // The handled-elsewhere outcome was saved above for auditing.
             AlertQueueStore.dequeue(this)
             if (AlertQueueStore.size(this) > 0) {
                 showNextFromQueue()
@@ -384,6 +453,57 @@ class AlertActivity : AppCompatActivity() {
         nm.cancel(currentNotifId)
         // Cancel the ongoing grouped/status notification from the shade
         nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+    }
+
+    private fun postReturnNotification() {
+        val alert = AlertQueueStore.loadAll(this)
+            .firstOrNull { it.labelCode == currentLabelCode }
+            ?: return
+        val remainingMs = DeviceSettings.alertTimeoutMs(this) -
+            (System.currentTimeMillis() - alert.receivedAt)
+        if (remainingMs <= 0) return
+        val intent = Intent(this, AlertActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this,
+            alert.notificationId,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                android.app.PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notificationManager =
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (notificationManager.getNotificationChannel(
+                MyFirebaseMessagingService.STATUS_CHANNEL_ID) == null) {
+            notificationManager.createNotificationChannel(
+                android.app.NotificationChannel(
+                    MyFirebaseMessagingService.STATUS_CHANNEL_ID,
+                    "Active Call Status",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    setSound(null, null)
+                    enableVibration(false)
+                },
+            )
+        }
+        val notification = androidx.core.app.NotificationCompat.Builder(
+            this,
+            MyFirebaseMessagingService.STATUS_CHANNEL_ID,
+        )
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF2F006D.toInt())
+            .setContentTitle("1 active Employee Call")
+            .setContentText(alert.message)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(alert.message))
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setTimeoutAfter(remainingMs)
+            .build()
+        notificationManager.notify(alert.notificationId, notification)
     }
 
     // -------------------------------------------------------------------------
@@ -420,11 +540,16 @@ class AlertActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (currentLabelCode.isNotBlank()) nm.cancel(currentNotifId)
+        nm.cancel(MyFirebaseMessagingService.GROUPED_NOTIFICATION_ID)
+        if (currentLabelCode.isNotBlank() && ringtone == null) startRingtone()
     }
 
     override fun onPause() {
         super.onPause()
         stopRingtone()
+        postReturnNotification()
     }
 
     override fun onDestroy() {

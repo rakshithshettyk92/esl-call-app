@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_horizontal_padding">160dp</dimen>
+    <dimen name="screen_vertical_padding">36dp</dimen>
+    <dimen name="content_section_spacing">24dp</dimen>
+    <dimen name="history_list_horizontal_padding">144dp</dimen>
+    <dimen name="alert_horizontal_padding">220dp</dimen>
+</resources>

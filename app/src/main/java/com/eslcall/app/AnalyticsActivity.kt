@@ -27,9 +27,14 @@ class AnalyticsActivity : AppCompatActivity() {
     private lateinit var tvKpiDismissed: TextView
 
     private lateinit var donutStatus:   DonutChartView
-    private lateinit var chartAisles:   VerticalBarChartView
-    private lateinit var chartArticles: VerticalBarChartView
-    private lateinit var chartHour:     VerticalBarChartView
+    private lateinit var chartAisles:   RankedStatsView
+    private lateinit var chartArticles: RankedStatsView
+    private lateinit var tvPeakHour: TextView
+    private lateinit var tvPeakCalls: TextView
+    private lateinit var tvOvernightCalls: TextView
+    private lateinit var tvMorningCalls: TextView
+    private lateinit var tvAfternoonCalls: TextView
+    private lateinit var tvEveningCalls: TextView
     private lateinit var tvNoAisles:    TextView
     private lateinit var tvNoArticles:  TextView
 
@@ -40,8 +45,10 @@ class AnalyticsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_analytics)
 
-        findViewById<MaterialToolbar>(R.id.toolbar)
-            .setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<MaterialToolbar>(R.id.toolbar).apply {
+            applyStatusBarInset()
+            setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        }
 
         rangeChips     = findViewById(R.id.rangeChips)
         progress       = findViewById(R.id.progress)
@@ -55,7 +62,12 @@ class AnalyticsActivity : AppCompatActivity() {
         donutStatus    = findViewById(R.id.donutStatus)
         chartAisles    = findViewById(R.id.chartAisles)
         chartArticles  = findViewById(R.id.chartArticles)
-        chartHour      = findViewById(R.id.chartHour)
+        tvPeakHour       = findViewById(R.id.tvPeakHour)
+        tvPeakCalls      = findViewById(R.id.tvPeakCalls)
+        tvOvernightCalls = findViewById(R.id.tvOvernightCalls)
+        tvMorningCalls   = findViewById(R.id.tvMorningCalls)
+        tvAfternoonCalls = findViewById(R.id.tvAfternoonCalls)
+        tvEveningCalls   = findViewById(R.id.tvEveningCalls)
         tvNoAisles     = findViewById(R.id.tvNoAisles)
         tvNoArticles   = findViewById(R.id.tvNoArticles)
 
@@ -110,7 +122,7 @@ class AnalyticsActivity : AppCompatActivity() {
 
         val response = json.optJSONObject("responseMs")
         val avgMs    = response?.optInt("avg") ?: 0
-        tvKpiResponse.text = if (avgMs > 0) formatDuration(avgMs.toLong()) else "—"
+        tvKpiResponse.text = if (avgMs > 0) formatDuration(avgMs.toLong()) else "Not available"
 
         // Donut: outcome mix
         donutStatus.segments = listOf(
@@ -120,29 +132,40 @@ class AnalyticsActivity : AppCompatActivity() {
         )
         val pct = if (total > 0) (ack * 100 / total) else 0
         donutStatus.centerText    = "$pct%"
-        donutStatus.centerCaption = "Acknowledged"
+        donutStatus.centerCaption = "Attended"
 
         // Top aisles
         val aisles = parseTopList(json.optJSONArray("topAisles"))
-        chartAisles.bars = aisles.map { VerticalBarChartView.Bar(it.first, it.second.toFloat()) }
+        chartAisles.items = aisles.map {
+            val label = if (it.first.startsWith("aisle", ignoreCase = true)) {
+                it.first
+            } else {
+                "Aisle ${it.first}"
+            }
+            RankedStatsView.Item(label, it.second.toFloat())
+        }
         tvNoAisles.visibility   = if (aisles.isEmpty()) View.VISIBLE else View.GONE
         chartAisles.visibility  = if (aisles.isEmpty()) View.GONE    else View.VISIBLE
 
         // Top articles
         val articles = parseTopList(json.optJSONArray("topArticles"))
-        chartArticles.bars = articles.map { VerticalBarChartView.Bar(truncate(it.first, 12), it.second.toFloat()) }
+        chartArticles.items = articles.map { RankedStatsView.Item(it.first, it.second.toFloat()) }
         tvNoArticles.visibility  = if (articles.isEmpty()) View.VISIBLE else View.GONE
         chartArticles.visibility = if (articles.isEmpty()) View.GONE    else View.VISIBLE
 
         // Hour-of-day: 24 buckets
         val perHour = json.optJSONArray("perHour")
-        val hourBars = (0..23).map { h ->
-            val v = perHour?.optInt(h) ?: 0
-            // Show every-6h label so axis isn't crowded
-            val label = if (h % 6 == 0) "${h}h" else ""
-            VerticalBarChartView.Bar(label, v.toFloat())
+        val hourly = (0..23).map { perHour?.optInt(it) ?: 0 }
+        val peakHour = hourly.indices.maxByOrNull { hourly[it] } ?: 0
+        val peakCount = hourly.getOrElse(peakHour) { 0 }
+        tvPeakHour.text = if (peakCount == 0) "No calls yet" else formatHourRange(peakHour)
+        tvPeakCalls.text = if (peakCount == 0) "No peak time for this period" else {
+            "$peakCount call${if (peakCount == 1) "" else "s"} during the busiest hour"
         }
-        chartHour.bars = hourBars
+        tvOvernightCalls.text = hourly.slice(0..5).sum().toString()
+        tvMorningCalls.text = hourly.slice(6..11).sum().toString()
+        tvAfternoonCalls.text = hourly.slice(12..17).sum().toString()
+        tvEveningCalls.text = hourly.slice(18..23).sum().toString()
     }
 
     private fun parseTopList(arr: org.json.JSONArray?): List<Pair<String, Int>> {
@@ -156,9 +179,6 @@ class AnalyticsActivity : AppCompatActivity() {
         return out
     }
 
-    private fun truncate(s: String, max: Int): String =
-        if (s.length <= max) s else s.substring(0, max - 1) + "…"
-
     private fun formatDuration(ms: Long): String {
         val totalSec = ms / 1000
         return when {
@@ -166,6 +186,15 @@ class AnalyticsActivity : AppCompatActivity() {
             totalSec < 3600 -> "${totalSec / 60}m ${totalSec % 60}s"
             else            -> "${totalSec / 3600}h ${(totalSec % 3600) / 60}m"
         }
+    }
+
+    private fun formatHourRange(hour: Int): String =
+        "${formatHour(hour)} to ${formatHour((hour + 1) % 24)}"
+
+    private fun formatHour(hour: Int): String {
+        val normalized = hour % 24
+        val displayHour = when (val h = normalized % 12) { 0 -> 12; else -> h }
+        return "$displayHour ${if (normalized < 12) "AM" else "PM"}"
     }
 
     private fun showError(msg: String) {

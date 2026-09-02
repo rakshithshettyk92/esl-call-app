@@ -3,20 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/primary"
-        app:title="Admin"
-        app:titleTextColor="@color/white"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/white" />
+        app:navigationIconTint="@color/white"
+        app:subtitle="Configuration, device behavior and reporting"
+        app:subtitleTextColor="#CEB8E8"
+        app:title="Settings &amp; Insights"
+        app:titleTextColor="@color/white" />
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -26,28 +28,32 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="@dimen/screen_horizontal_padding"
+            android:paddingTop="@dimen/screen_vertical_padding"
+            android:paddingEnd="@dimen/screen_horizontal_padding"
+            android:paddingBottom="32dp">
 
             <TextView
                 android:id="@+id/tvScope"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
+                android:textColor="@color/primary"
                 android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
+                android:textStyle="bold" />
 
-            <!-- Product Field Config card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardFieldMapping"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
                 app:cardBackgroundColor="@color/surface"
-                app:rippleColor="#22000000">
+                app:cardCornerRadius="14dp"
+                app:cardElevation="1dp"
+                app:rippleColor="#22000000"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -58,18 +64,27 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Product Field Config"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:text="Call rules"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Map article columns the relay reads for each call — article name, help-enabled, aisle, revert delay."
+                        android:layout_marginTop="6dp"
+                        android:text="Choose the article columns used for the call name, eligibility check, aisle and shelf-page reset."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Configure store call rules"
+                        android:textColor="@color/primary"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -77,13 +92,15 @@
                 android:id="@+id/cardDeviceSettings"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
+                android:layout_marginTop="14dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:rippleColor="#22000000">
+                app:cardCornerRadius="14dp"
+                app:cardElevation="1dp"
+                app:rippleColor="#22000000"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -94,32 +111,43 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Device Alert Settings"
+                        android:text="This device"
                         android:textColor="@color/text_primary"
-                        android:textSize="17sp"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Change the response window, relay health interval, and screen-awake behavior on this phone."
+                        android:layout_marginTop="6dp"
+                        android:text="Change response time, session sign-out, server checks and screen-awake behavior only for this phone or tablet."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Open device settings"
+                        android:textColor="@color/primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Analytics card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardAnalytics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
                 app:cardBackgroundColor="@color/surface"
-                app:rippleColor="#22000000">
+                app:cardCornerRadius="14dp"
+                app:cardElevation="1dp"
+                app:rippleColor="#22000000"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -130,21 +158,37 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Analytics"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:text="Store insights"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Call volume, response times, top aisles and products for this store."
+                        android:layout_marginTop="6dp"
+                        android:text="Review call volume, attended and missed outcomes, response times, aisles and products for this store."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="View store insights"
+                        android:textColor="@color/primary"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Tip: call rules apply to the selected store. Device settings apply only to this device."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

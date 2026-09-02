@@ -15,8 +15,10 @@ class DeviceSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device_settings)
 
-        findViewById<MaterialToolbar>(R.id.toolbar)
-            .setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<MaterialToolbar>(R.id.toolbar).apply {
+            applyStatusBarInset()
+            setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        }
         val alert = findViewById<TextInputEditText>(R.id.etAlertTimeout)
         val poll = findViewById<TextInputEditText>(R.id.etAuthPollInterval)
         val keepOn = findViewById<MaterialSwitch>(R.id.switchKeepScreenOn)
@@ -30,6 +32,18 @@ class DeviceSettingsActivity : AppCompatActivity() {
         alert.setText((DeviceSettings.alertTimeoutMs(this) / 1_000).toString())
         poll.setText((DeviceSettings.authPollIntervalMs(this) / 1_000).toString())
         keepOn.isChecked = DeviceSettings.keepReadyScreenOn(this)
+
+        findViewById<Button>(R.id.btnRestoreRecommended).setOnClickListener {
+            alert.setText("60")
+            poll.setText("300")
+            keepOn.isChecked = true
+            sessionTimeout.setText(DeviceSettings.sessionTimeoutLabel(0), false)
+            alert.error = null
+            poll.error = null
+            sessionTimeout.error = null
+            Toast.makeText(this, "Recommended values loaded. Tap Save to apply.",
+                Toast.LENGTH_SHORT).show()
+        }
 
         findViewById<Button>(R.id.btnSaveDeviceSettings).setOnClickListener {
             val alertSeconds = alert.text?.toString()?.toIntOrNull()
