@@ -44,7 +44,7 @@ class RankedStatsView @JvmOverloads constructor(
         isFakeBoldText = true
     }
     private val countPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.primary)
+        color = ContextCompat.getColor(context, R.color.link_primary)
         textSize = 14f * density
         textAlign = Paint.Align.RIGHT
         isFakeBoldText = true

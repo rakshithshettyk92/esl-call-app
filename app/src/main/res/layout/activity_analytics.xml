@@ -10,10 +10,10 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:subtitle="Performance and call patterns"
+        app:subtitle="When and where customers need help"
         app:subtitleTextColor="#D8CBE9"
         app:title="Store Insights"
         app:titleTextColor="@color/white" />
@@ -38,7 +38,7 @@
                 android:id="@+id/tvScope"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/primary"
+                android:textColor="@color/link_primary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -86,7 +86,7 @@
                 android:layout_gravity="center"
                 android:layout_margin="12dp"
                 android:visibility="gone"
-                app:indicatorColor="@color/primary" />
+                app:indicatorColor="@color/link_primary" />
 
             <TextView
                 android:id="@+id/tvError"
@@ -95,7 +95,7 @@
                 android:layout_marginTop="8dp"
                 android:background="@drawable/shape_status_missed"
                 android:padding="12dp"
-                android:textColor="#9B1C1C"
+                android:textColor="@color/error_text"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -103,7 +103,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="@color/primary"
+                app:cardBackgroundColor="@color/brand_primary"
                 app:cardCornerRadius="22dp"
                 app:cardElevation="3dp">
 
@@ -162,7 +162,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="AVG RESPONSE"
+                            android:text="AVERAGE RESPONSE"
                             android:textColor="#D8CBE9"
                             android:textSize="11sp"
                             android:textStyle="bold" />
@@ -184,7 +184,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Call outcomes"
+                android:text="What happened to calls"
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -193,7 +193,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="See how calls were resolved in the selected period"
+                android:text="See how calls were handled during the time selected above"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 
@@ -204,7 +204,7 @@
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="1dp"
-                app:strokeColor="#E3DCEC"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -247,7 +247,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
                             android:text="MISSED"
-                            android:textColor="#E65100"
+                            android:textColor="@color/missed_text"
                             android:textSize="11sp"
                             android:textStyle="bold" />
                         <TextView
@@ -303,7 +303,7 @@
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="1dp"
-                app:strokeColor="#E3DCEC"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp">
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -329,7 +329,7 @@
                         android:layout_marginTop="20dp"
                         android:layout_marginBottom="12dp"
                         android:gravity="center"
-                        android:text="No aisle data for this period"
+                        android:text="No aisle information for this time"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp"
                         android:visibility="gone" />
@@ -343,7 +343,7 @@
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="1dp"
-                app:strokeColor="#E3DCEC"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp">
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -369,7 +369,7 @@
                         android:layout_marginTop="20dp"
                         android:layout_marginBottom="12dp"
                         android:gravity="center"
-                        android:text="No product data for this period"
+                        android:text="No product information for this time"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp"
                         android:visibility="gone" />
@@ -383,7 +383,7 @@
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="1dp"
-                app:strokeColor="#E3DCEC"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp">
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -401,7 +401,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Plan coverage around the busiest periods"
+                        android:text="Plan staff coverage around the busiest times"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -416,7 +416,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="PEAK HOUR"
-                            android:textColor="@color/primary"
+                            android:textColor="@color/link_primary"
                             android:textSize="11sp"
                             android:textStyle="bold" />
                         <TextView
@@ -442,7 +442,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:text="CALLS BY DAY PART"
+                        android:text="CALLS BY TIME OF DAY"
                         android:textColor="@color/text_secondary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -472,7 +472,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/primary"
+                                android:textColor="@color/link_primary"
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
@@ -495,7 +495,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/primary"
+                                android:textColor="@color/link_primary"
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
@@ -526,7 +526,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/primary"
+                                android:textColor="@color/link_primary"
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
@@ -549,7 +549,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/primary"
+                                android:textColor="@color/link_primary"
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
                         </LinearLayout>

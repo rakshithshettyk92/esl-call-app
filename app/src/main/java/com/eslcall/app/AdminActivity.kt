@@ -26,7 +26,7 @@ class AdminActivity : AppCompatActivity() {
         val co    = Session.companyCode(this).orEmpty()
         val store = Session.storeName(this) ?: Session.storeCode(this).orEmpty()
         findViewById<TextView>(R.id.tvScope).text =
-            if (co.isNotEmpty() && store.isNotEmpty()) "Scope: $co • $store" else ""
+            if (co.isNotEmpty() && store.isNotEmpty()) "Store: $co • $store" else ""
 
         findViewById<MaterialCardView>(R.id.cardFieldMapping).setOnClickListener {
             startActivity(Intent(this, FieldMappingActivity::class.java))

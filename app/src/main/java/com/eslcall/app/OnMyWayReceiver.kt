@@ -22,7 +22,7 @@ class OnMyWayReceiver : BroadcastReceiver() {
         if (company.isBlank() || store.isBlank() || label.isBlank()) return
 
         AcknowledgeWorker.enqueue(context, company, store, label, callId)
-        Toast.makeText(context, "Response queued - confirming with the store...",
+        Toast.makeText(context, "Your response is waiting to be sent. Employee Call will keep trying.",
             Toast.LENGTH_SHORT).show()
     }
 }

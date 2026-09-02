@@ -12,8 +12,8 @@
     <style name="Theme.ESLCallApp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_dark</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="android:statusBarColor">@color/brand_primary</item>
         <item name="android:windowBackground">@color/background</item>
     </style>
 
@@ -28,7 +28,7 @@
     <!-- History screen -->
     <style name="Theme.ESLCallApp.History" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
-        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:statusBarColor">@color/brand_primary</item>
         <item name="android:windowBackground">@color/background</item>
     </style>
 

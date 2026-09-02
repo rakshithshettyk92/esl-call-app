@@ -10,10 +10,10 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:subtitle="Configuration, device behavior and reporting"
+        app:subtitle="Call settings and store activity"
         app:subtitleTextColor="#CEB8E8"
         app:title="Settings &amp; Insights"
         app:titleTextColor="@color/white" />
@@ -38,7 +38,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:textColor="@color/primary"
+                android:textColor="@color/link_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -64,7 +64,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Call rules"
+                        android:text="Store call setup"
                         android:textColor="@color/text_primary"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -73,7 +73,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="Choose the article columns used for the call name, eligibility check, aisle and shelf-page reset."
+                        android:text="Choose what appears in a call, when a button press should create one, and when the shelf display returns to normal."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
@@ -81,8 +81,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Configure store call rules"
-                        android:textColor="@color/primary"
+                        android:text="Open store call setup"
+                        android:textColor="@color/link_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -120,7 +120,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="Change response time, session sign-out, server checks and screen-awake behavior only for this phone or tablet."
+                        android:text="Choose how long calls stay open, when this device signs out, how often it checks for problems, and whether the Ready screen stays visible."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
@@ -129,7 +129,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:text="Open device settings"
-                        android:textColor="@color/primary"
+                        android:textColor="@color/link_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -167,7 +167,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="Review call volume, attended and missed outcomes, response times, aisles and products for this store."
+                        android:text="See how many calls arrived, what happened to them, how quickly associates responded, and where customers needed help."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
@@ -176,7 +176,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:text="View store insights"
-                        android:textColor="@color/primary"
+                        android:textColor="@color/link_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -186,7 +186,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Tip: call rules apply to the selected store. Device settings apply only to this device."
+                android:text="Store call setup affects everyone using this store. Device settings affect only this phone or tablet."
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>

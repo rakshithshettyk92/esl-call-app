@@ -10,10 +10,10 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:subtitle="Choose where this device receives calls"
+        app:subtitle="Where this device receives calls"
         app:subtitleTextColor="#CEB8E8"
         app:title="Select Store"
         app:titleTextColor="@color/white" />
@@ -36,7 +36,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#F1ECF8"
+                app:cardBackgroundColor="@color/info_surface"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp">
 
@@ -44,7 +44,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:text="Calls are routed by store. Every signed-in associate who selects the same store receives the alert; the first person to accept is assigned."
+                    android:text="Calls are shared with everyone signed in to this store. The first associate to accept a call is assigned to help."
                     android:textColor="@color/text_primary"
                     android:textSize="13sp" />
             </com.google.android.material.card.MaterialCardView>
@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="Step 1 of 2"
-                android:textColor="@color/primary"
+                android:textColor="@color/link_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -89,7 +89,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="12dp"
-                android:backgroundTint="@color/primary"
+                android:backgroundTint="@color/action_primary"
                 android:text="Find stores"
                 android:textColor="@color/white" />
 
@@ -100,14 +100,14 @@
                 android:layout_gravity="center"
                 android:layout_marginTop="16dp"
                 android:visibility="gone"
-                app:indicatorColor="@color/primary" />
+                app:indicatorColor="@color/link_primary" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="26dp"
                 android:text="Step 2 of 2"
-                android:textColor="@color/primary"
+                android:textColor="@color/link_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -152,7 +152,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="#C62828"
+                android:textColor="@color/error_text"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -161,7 +161,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
-                android:backgroundTint="@color/primary"
+                android:backgroundTint="@color/action_primary"
                 android:enabled="false"
                 android:text="Use this store"
                 android:textColor="@color/white" />

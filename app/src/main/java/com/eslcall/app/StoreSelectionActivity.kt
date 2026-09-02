@@ -113,13 +113,13 @@ class StoreSelectionActivity : AppCompatActivity() {
                     tvStoreCount.visibility = View.VISIBLE
                     progress.visibility     = View.GONE
                     btnLoadStores.isEnabled = true
-                    if (list.isEmpty()) showError("No stores were found for $company. Check the company code and your AIMS access.")
+                    if (list.isEmpty()) showError("No stores were found for $company. Check the company code and try again.")
                 }
             } catch (e: Exception) {
                 runOnUiThread {
                     progress.visibility     = View.GONE
                     btnLoadStores.isEnabled = true
-                    showError(e.message ?: "Failed to load stores")
+                    showError("Stores could not be loaded. Check the company code and your internet connection, then try again.")
                 }
             }
         }.start()

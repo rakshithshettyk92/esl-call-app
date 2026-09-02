@@ -9,7 +9,7 @@
         android:id="@+id/activeCallsHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="8dp"
@@ -74,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Accept a call you can attend, or choose Not taking to remove it only from this device. Other calls remain available."
+            android:text="Tap I'm on my way for a call you can help with. Tap Not taking to remove it from this phone. Other associates can still respond."
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
     </LinearLayout>

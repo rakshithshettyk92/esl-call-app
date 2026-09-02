@@ -41,7 +41,7 @@ class DeviceSettingsActivity : AppCompatActivity() {
             alert.error = null
             poll.error = null
             sessionTimeout.error = null
-            Toast.makeText(this, "Recommended values loaded. Tap Save to apply.",
+            Toast.makeText(this, "Recommended choices loaded. Tap Save choices to apply them.",
                 Toast.LENGTH_SHORT).show()
         }
 
@@ -53,16 +53,16 @@ class DeviceSettingsActivity : AppCompatActivity() {
                 ?.let { DeviceSettings.sessionTimeoutOptions[it] }
             when {
                 alertSeconds == null || alertSeconds !in 15..600 ->
-                    alert.error = "Use 15 to 600 seconds"
+                    alert.error = "Enter a time from 15 to 600 seconds"
                 pollSeconds == null || pollSeconds !in 30..3600 ->
-                    poll.error = "Use 30 to 3600 seconds"
+                    poll.error = "Enter a time from 30 to 3600 seconds"
                 selectedTimeoutHours == null ->
-                    sessionTimeout.error = "Choose a session timeout"
+                    sessionTimeout.error = "Choose when this device should sign out"
                 else -> {
                     DeviceSettings.save(this, alertSeconds, pollSeconds, keepOn.isChecked,
                         selectedTimeoutHours)
                     Session.restartExpiryClock(this)
-                    Toast.makeText(this, "Device settings saved", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Your choices were saved", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }

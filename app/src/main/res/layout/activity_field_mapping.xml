@@ -10,12 +10,12 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:subtitle="Controls which button presses become calls"
+        app:subtitle="Call details and rules"
         app:subtitleTextColor="#CEB8E8"
-        app:title="Call Rules"
+        app:title="Store Call Setup"
         app:titleTextColor="@color/white" />
 
     <androidx.core.widget.NestedScrollView
@@ -37,7 +37,7 @@
                 android:id="@+id/tvScope"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/primary"
+                android:textColor="@color/link_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -45,10 +45,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#F1ECF8"
+                app:cardBackgroundColor="@color/info_surface"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
-                app:strokeColor="#D5C8E7"
+                app:strokeColor="@color/info_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -60,7 +60,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="How a button press becomes a call"
+                        android:text="What happens after a button press"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -70,7 +70,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="1. The relay finds the article attached to the label.&#10;2. The eligibility field must equal the enabled value.&#10;3. Eligible calls are sent to every registered device in this store."
+                        android:text="1. Employee Call checks which product or location the button belongs to.&#10;2. It confirms that employee calls are turned on for that item.&#10;3. Everyone signed in to this store receives the call."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
@@ -78,8 +78,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="If the field is missing or has another value, the press is intentionally skipped. The reason appears in Employee Call Operation logs."
-                        android:textColor="#8A4F00"
+                        android:text="If calls are not turned on for that item, no alert is sent. The dashboard records why so an administrator can review it."
+                        android:textColor="@color/warning_text"
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -93,14 +93,14 @@
                 android:layout_marginTop="16dp"
                 android:indeterminate="true"
                 android:visibility="gone"
-                app:indicatorColor="@color/primary" />
+                app:indicatorColor="@color/link_primary" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="10dp"
-                android:text="Article information"
+                android:text="What the call is about"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -109,8 +109,8 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Article ID column"
-                app:helperText="Column containing the article identifier sent by the button press">
+                android:hint="Where is the item number stored?"
+                app:helperText="Choose the AIMS option that contains the product or location number linked to the button.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/articleIdInput"
@@ -124,8 +124,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:hint="Display name column"
-                app:helperText="Friendly product or location name shown in the call">
+                android:hint="Where is the name shown in calls stored?"
+                app:helperText="Choose the AIMS option that contains the product or location name associates should see.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/articleNameInput"
@@ -139,7 +139,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="10dp"
-                android:text="Call eligibility"
+                android:text="When a call is allowed"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -148,8 +148,8 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Eligibility column"
-                app:helperText="Example: EMPLOYEE_CALL. Blank or mismatched values are skipped.">
+                android:hint="Where does AIMS say calls are allowed?"
+                app:helperText="Choose the AIMS option used to allow or stop employee calls, for example EMPLOYEE_CALL.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/helpEnabledFieldInput"
@@ -163,8 +163,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:hint="Enabled value"
-                app:helperText="Exact value that allows a call, for example YES or Y">
+                android:hint="What value means calls are allowed?"
+                app:helperText="Enter the value used in AIMS when employee calls are allowed, for example YES or Y.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/helpEnabledValueInput"
@@ -179,7 +179,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="10dp"
-                android:text="Call display and shelf response"
+                android:text="What associates see"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -188,8 +188,8 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Aisle or location column (optional)"
-                app:helperText="Included in the alert so the associate knows where to go">
+                android:hint="Where is the aisle or location stored?"
+                app:helperText="Optional. Choose the AIMS option that tells the associate where to go.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/aisleInput"
@@ -203,8 +203,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:hint="Shelf page reset delay (seconds)"
-                app:helperText="5-600 seconds. After acceptance, page 2 stays visible for this long before returning to page 1.">
+                android:hint="Shelf display wait time (seconds)"
+                app:helperText="Choose 5 to 600 seconds. After a call is accepted, the shelf display waits this long before returning to its normal page.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/revertDelayInput"
@@ -219,7 +219,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:textColor="#C62828"
+                android:textColor="@color/error_text"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -228,9 +228,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
-                android:backgroundTint="@color/primary"
+                android:backgroundTint="@color/action_primary"
                 android:enabled="false"
-                android:text="Save call rules"
+                android:text="Save store setup"
                 android:textColor="@color/white" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

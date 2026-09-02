@@ -1,10 +1,10 @@
 package com.eslcall.app
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 class HistoryAdapter(private var items: List<AlertHistoryItem>) :
@@ -31,9 +31,10 @@ class HistoryAdapter(private var items: List<AlertHistoryItem>) :
         holder.tvMessage.text = item.message
         holder.tvDay.text = item.relativeDay()
         holder.tvTime.text = item.formattedTimeOnly()
-        holder.tvContext.text = listOf(item.companyCode, item.labelCode)
-            .filter { it.isNotBlank() }
-            .joinToString("  /  ")
+        holder.tvContext.text = listOfNotNull(
+            item.companyCode.takeIf { it.isNotBlank() }?.let { "Company $it" },
+            item.labelCode.takeIf { it.isNotBlank() }?.let { "Button $it" },
+        ).joinToString("  •  ")
         holder.tvContext.visibility = if (holder.tvContext.text.isBlank()) View.GONE else View.VISIBLE
 
         when (item.status) {
@@ -41,25 +42,25 @@ class HistoryAdapter(private var items: List<AlertHistoryItem>) :
                 holder,
                 "\u2713",
                 item.handledBy?.let { "Attended by you - $it" } ?: "Attended by you",
-                "#00897B",
+                R.color.green,
                 R.drawable.shape_status_attended,
             )
             AlertStatus.HANDLED_BY_OTHER -> bindStatus(
                 holder,
                 "\u2192",
                 item.handledBy?.let { "Attended by $it" } ?: "Attended by another associate",
-                "#5E35B1",
+                R.color.handled_other_text,
                 R.drawable.shape_status_other,
             )
             AlertStatus.DISMISSED -> bindStatus(
-                holder, "\u00D7", "Not taken on this device", "#616161", R.drawable.shape_status_dismissed)
+                holder, "\u00D7", "Not taken on this device", R.color.dismissed_text, R.drawable.shape_status_dismissed)
             AlertStatus.MISSED -> bindStatus(
-                holder, "!", "Missed - response time expired", "#E65100", R.drawable.shape_status_missed)
+                holder, "!", "Missed because no one responded in time", R.color.missed_text, R.drawable.shape_status_missed)
         }
     }
 
-    private fun bindStatus(holder: ViewHolder, icon: String, label: String, color: String, background: Int) {
-        val parsedColor = Color.parseColor(color)
+    private fun bindStatus(holder: ViewHolder, icon: String, label: String, color: Int, background: Int) {
+        val parsedColor = ContextCompat.getColor(holder.itemView.context, color)
         holder.tvIcon.text = icon
         holder.tvIcon.setTextColor(parsedColor)
         holder.viewIconBg.setBackgroundResource(background)

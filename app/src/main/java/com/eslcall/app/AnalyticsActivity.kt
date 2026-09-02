@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -102,7 +103,7 @@ class AnalyticsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     progress.visibility = View.GONE
-                    showError(e.message ?: "Failed to load analytics")
+                    showError("Store activity could not be loaded. Check your internet connection and try again.")
                 }
             }
         }.start()
@@ -126,9 +127,9 @@ class AnalyticsActivity : AppCompatActivity() {
 
         // Donut: outcome mix
         donutStatus.segments = listOf(
-            DonutChartView.Segment(ack.toFloat(),       0xFF00897B.toInt()),
-            DonutChartView.Segment(missed.toFloat(),    0xFFE65100.toInt()),
-            DonutChartView.Segment(dismissed.toFloat(), 0xFF757575.toInt()),
+            DonutChartView.Segment(ack.toFloat(), ContextCompat.getColor(this, R.color.green)),
+            DonutChartView.Segment(missed.toFloat(), ContextCompat.getColor(this, R.color.missed_text)),
+            DonutChartView.Segment(dismissed.toFloat(), ContextCompat.getColor(this, R.color.dismissed_text)),
         )
         val pct = if (total > 0) (ack * 100 / total) else 0
         donutStatus.centerText    = "$pct%"

@@ -72,9 +72,9 @@ class HistoryActivity : AppCompatActivity() {
             Filter.HANDLED_ELSEWHERE -> "No calls attended elsewhere"
         }
         tvEmptyMessage.text = if (filter == Filter.ALL) {
-            "Incoming calls and their final outcomes will appear here."
+            "New calls and what happened to them will appear here."
         } else {
-            "Choose another filter to view different call outcomes."
+            "Choose another option above to see different calls."
         }
         layoutEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         recycler.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE

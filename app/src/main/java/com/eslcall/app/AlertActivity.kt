@@ -228,7 +228,7 @@ class AlertActivity : AppCompatActivity() {
 
         when (status) {
             AlertStatus.MISSED -> Toast.makeText(this,
-                "Call missed - the response time expired", Toast.LENGTH_SHORT).show()
+                "Call missed because no one responded in time", Toast.LENGTH_SHORT).show()
             AlertStatus.DISMISSED -> Toast.makeText(this,
                 "Not taking this call. Other associates can still respond.",
                 Toast.LENGTH_SHORT).show()
@@ -256,7 +256,7 @@ class AlertActivity : AppCompatActivity() {
             handledBy = Session.username(this),
         ))
         AlertQueueStore.removeByLabelCode(this, alert.labelCode)
-        Toast.makeText(this, "Preview response confirmed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Preview call assigned to you", Toast.LENGTH_SHORT).show()
         if (AlertQueueStore.size(this) > 0) {
             showNextFromQueue()
         } else {
@@ -293,7 +293,7 @@ class AlertActivity : AppCompatActivity() {
                 val secondsLeft = (millisUntilFinished / 1_000).toInt()
                 val progress    = (millisUntilFinished * 100 / autoDismissMs).toInt()
                 tvCountdown.text           = secondsLeft.toString()
-                tvAutoDismiss.text         = "Recorded as missed in ${secondsLeft}s"
+                tvAutoDismiss.text         = "Marked as missed in ${secondsLeft}s"
                 progressCountdown.progress = progress
             }
             override fun onFinish() {
@@ -309,7 +309,7 @@ class AlertActivity : AppCompatActivity() {
     private fun triggerAcknowledge(callId: String, companyCode: String, labelCode: String, message: String) {
         stopRingtone()
         btnOnMyWay.isEnabled = false
-        btnOnMyWay.text      = "Confirming response..."
+        btnOnMyWay.text      = "Assigning this call to you..."
         btnDismiss.isEnabled = false
         countDownTimer?.cancel()
 
@@ -346,8 +346,8 @@ class AlertActivity : AppCompatActivity() {
                                 )
                             )
                             AlertQueueStore.dequeue(this)
-                            btnOnMyWay.text = "Response confirmed"
-                            tvAutoDismiss.text = "This call is assigned to you. Closing..."
+                            btnOnMyWay.text = "Call assigned to you"
+                            tvAutoDismiss.text = "This call is yours. Closing..."
                             Handler(Looper.getMainLooper()).postDelayed({
                                 if (AlertQueueStore.size(this) > 0) {
                                     showNextFromQueue()
@@ -363,7 +363,7 @@ class AlertActivity : AppCompatActivity() {
                             btnOnMyWay.text      = "I'm on my way"
                             btnDismiss.isEnabled = true
                             restartCountdown()
-                            Toast.makeText(this, "Could not reach server. Try again.",
+                            Toast.makeText(this, "Employee Call could not connect. Check your internet and try again.",
                                 Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -374,7 +374,7 @@ class AlertActivity : AppCompatActivity() {
                     btnOnMyWay.text      = "I'm on my way"
                     btnDismiss.isEnabled = true
                     restartCountdown()
-                    Toast.makeText(this, "Could not reach server. Try again.",
+                    Toast.makeText(this, "Employee Call could not connect. Check your internet and try again.",
                         Toast.LENGTH_SHORT).show()
                 }
             }
@@ -408,15 +408,15 @@ class AlertActivity : AppCompatActivity() {
         }
         btnOnMyWay.isEnabled = false
         btnOnMyWay.text = if (acceptedByCurrentAssociate) {
-            "Response confirmed"
+            "Call assigned to you"
         } else {
-            "Already attended"
+            "Another associate is helping"
         }
         btnDismiss.isEnabled = false
         tvAutoDismiss.text = when {
-            acceptedByCurrentAssociate -> "This call is assigned to you. Closing..."
-            claimedBy.isBlank() -> "Another associate accepted this call. Closing..."
-            else -> "Accepted by $claimedBy. Closing..."
+            acceptedByCurrentAssociate -> "This call is yours. Closing..."
+            claimedBy.isBlank() -> "Another associate is helping this customer. Closing..."
+            else -> "$claimedBy is helping this customer. Closing..."
         }
         progressCountdown.progress = 0
 

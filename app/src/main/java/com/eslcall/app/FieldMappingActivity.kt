@@ -61,7 +61,7 @@ class FieldMappingActivity : AppCompatActivity() {
             return
         }
 
-        tvScope.text = "Scope: $company / ${Session.storeName(this) ?: store}"
+        tvScope.text = "Store: $company / ${Session.storeName(this) ?: store}"
 
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         btnSave.setOnClickListener { save() }
@@ -98,7 +98,7 @@ class FieldMappingActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     progress.visibility = View.GONE
-                    showError(e.message ?: "Failed to load configuration")
+                    showError("The store setup could not be loaded. Check your internet connection and try again.")
                     // Allow editing with defaults even if the fetch failed.
                     bind(CallFieldMapping.DEFAULT)
                     refreshSaveEnabled()
@@ -136,18 +136,18 @@ class FieldMappingActivity : AppCompatActivity() {
     private fun save() {
         val mapping = current()
         if (!mapping.isComplete()) {
-            showError("Complete every required field and use a reset delay from 5 to 600 seconds.")
+            showError("Complete every required choice and enter 5 to 600 seconds for the shelf display.")
             return
         }
         if (columns.isNotEmpty()) {
             val selectedColumns = listOf(
-                "Article ID" to mapping.articleIdField,
-                "Display name" to mapping.articleNameField,
-                "Eligibility" to mapping.helpEnabledField,
-            ) + listOfNotNull(mapping.aisleField?.let { "Aisle or location" to it })
+                "Item ID choice" to mapping.articleIdField,
+                "Call name choice" to mapping.articleNameField,
+                "Calls on choice" to mapping.helpEnabledField,
+            ) + listOfNotNull(mapping.aisleField?.let { "Aisle or location choice" to it })
             val unknown = selectedColumns.firstOrNull { (_, value) -> value !in columns }
             if (unknown != null) {
-                showError("${unknown.first} column '${unknown.second}' is not in the current AIMS article format. Choose a value from the dropdown.")
+                showError("${unknown.first} '${unknown.second}' is no longer available in AIMS. Choose one of the available options.")
                 return
             }
         }
@@ -161,7 +161,7 @@ class FieldMappingActivity : AppCompatActivity() {
                 runOnUiThread {
                     progress.visibility = View.GONE
                     Toast.makeText(this,
-                        "Call rules saved. New button presses use them immediately.",
+                        "Store call setup saved. New button presses will use it right away.",
                         Toast.LENGTH_LONG).show()
                     finish()
                 }
@@ -169,7 +169,7 @@ class FieldMappingActivity : AppCompatActivity() {
                 runOnUiThread {
                     progress.visibility = View.GONE
                     btnSave.isEnabled   = true
-                    showError(e.message ?: "Save failed")
+                    showError("The store setup could not be saved. Check your internet connection and try again.")
                 }
             }
         }.start()

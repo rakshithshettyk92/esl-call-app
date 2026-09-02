@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
 
 /**
  * Minimal donut chart. Set [segments] and the view redraws.
@@ -34,15 +35,15 @@ class DonutChartView @JvmOverloads constructor(
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        color = 0xFF1A1A2E.toInt()
+        color = ContextCompat.getColor(context, R.color.text_primary)
         isFakeBoldText = true
     }
     private val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        color = 0xFF6B7A9A.toInt()
+        color = ContextCompat.getColor(context, R.color.text_secondary)
     }
     private val rect = RectF()
-    private val emptyColor = 0xFFE0E0E0.toInt()
+    private val emptyColor = ContextCompat.getColor(context, R.color.divider)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)

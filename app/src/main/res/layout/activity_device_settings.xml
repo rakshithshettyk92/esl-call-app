@@ -10,12 +10,12 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/white"
-        app:subtitle="Applies only to this device"
+        app:subtitle="Only for this device"
         app:subtitleTextColor="#CEB8E8"
-        app:title="Device Settings"
+        app:title="This Device"
         app:titleTextColor="@color/white" />
 
     <androidx.core.widget.NestedScrollView
@@ -44,7 +44,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:text="These options change how this phone or tablet behaves. They do not change another associate's device or AIMS account."
+                    android:text="These choices affect only this phone or tablet. They do not change another associate's device or AIMS account."
                     android:textColor="@color/text_primary"
                     android:textSize="13sp" />
             </com.google.android.material.card.MaterialCardView>
@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="10dp"
-                android:text="Incoming call behavior"
+                android:text="Call alerts"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -63,8 +63,8 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Time allowed to respond (seconds)"
-                app:helperText="Recommended: 60. After this time an unanswered call is recorded as Missed.">
+                android:hint="Time to answer a call (seconds)"
+                app:helperText="Recommended: 60 seconds. If nobody answers before time runs out, this device records the call as Missed.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAlertTimeout"
@@ -79,7 +79,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:minHeight="56dp"
-                android:text="Keep the Ready screen awake"
+                android:text="Keep the Ready screen visible"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp" />
 
@@ -96,7 +96,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="26dp"
                 android:layout_marginBottom="10dp"
-                android:text="Session and connectivity"
+                android:text="Sign-in and connection"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -105,8 +105,8 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Sign out this device automatically"
-                app:helperText="Never is recommended for demos. A timed option requires this associate to enter AIMS credentials again after expiry.">
+                android:hint="When should this device sign out?"
+                app:helperText="Never keeps the associate signed in on this device. Choosing a time asks them to sign in again after that many hours.">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/dropdownSessionTimeout"
@@ -120,8 +120,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Server health check interval (seconds)"
-                app:helperText="Recommended: 300 (5 minutes). Lower values detect outages sooner but use more network and battery.">
+                android:hint="How often should the app check for problems?"
+                app:helperText="Recommended: every 300 seconds (5 minutes). Checking more often finds connection problems sooner but uses more battery and data.">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAuthPollInterval"
@@ -143,8 +143,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="12dp"
-                android:backgroundTint="@color/primary"
-                android:text="Save device settings"
+                android:backgroundTint="@color/action_primary"
+                android:text="Save choices"
                 android:textColor="@color/white" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

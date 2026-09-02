@@ -222,7 +222,7 @@ class ActiveCallsActivity : AppCompatActivity() {
             ))
             AlertQueueStore.removeByLabelCode(this, alert.labelCode)
             nm.cancel(alert.notificationId)
-            Toast.makeText(this, "Preview response confirmed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Preview call assigned to you", Toast.LENGTH_SHORT).show()
             refreshList()
             return
         }
@@ -257,7 +257,7 @@ class ActiveCallsActivity : AppCompatActivity() {
                             AlertQueueStore.removeByLabelCode(this, alert.labelCode)
                             nm.cancel(alert.notificationId)
                             Toast.makeText(this,
-                                "Response confirmed - this call is assigned to you",
+                                "This call is now assigned to you",
                                 Toast.LENGTH_SHORT).show()
                             refreshList()
                         }
@@ -282,7 +282,7 @@ class ActiveCallsActivity : AppCompatActivity() {
                         else -> {
                             adapter.setItemIdle(alert.labelCode)
                             Toast.makeText(this,
-                                "Could not reach server. Try again.",
+                                "Employee Call could not connect. Check your internet and try again.",
                                 Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -290,7 +290,7 @@ class ActiveCallsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     adapter.setItemIdle(alert.labelCode)
-                    Toast.makeText(this, "Network error. Try again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Employee Call could not connect. Check your internet and try again.", Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()

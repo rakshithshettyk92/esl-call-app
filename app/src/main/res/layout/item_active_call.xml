@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/shape_call_number"
             android:text="CALL 1"
-            android:textColor="@color/primary"
+            android:textColor="@color/link_primary"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -79,7 +79,8 @@
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:backgroundTint="@color/primary"
+            android:backgroundTint="@color/action_primary"
+            android:textColor="@color/white"
             android:text="I'm on my way"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -91,9 +92,9 @@
             android:layout_height="48dp"
             android:minWidth="110dp"
             android:text="Not taking"
-            android:textColor="@color/primary"
+            android:textColor="@color/link_primary"
             android:textSize="14sp"
-            app:strokeColor="@color/primary" />
+            app:strokeColor="@color/link_primary" />
     </LinearLayout>
 
 </LinearLayout>

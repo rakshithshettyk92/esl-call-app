@@ -9,6 +9,10 @@
           Source: solum-group.com/solum/the-company/brand-identity
     -->
     <color name="primary">#2F006D</color>
+    <color name="brand_primary">#2F006D</color>
+    <color name="action_primary">#2F006D</color>
+    <color name="link_primary">#2F006D</color>
+    <color name="on_primary">#FFFFFF</color>
     <color name="primary_light">#001973</color>
     <color name="primary_dark">#1A003D</color>
     <color name="accent">#FFCD00</color>
@@ -19,6 +23,9 @@
     <color name="divider">#E0E4EC</color>
     <color name="soft_surface">#F4F1F8</color>
     <color name="soft_surface_emphasis">#EEE7F7</color>
+    <color name="card_stroke">#E3DCEC</color>
+    <color name="info_surface">#F1ECF8</color>
+    <color name="info_stroke">#D5C8E7</color>
 
     <!-- Text -->
     <color name="text_primary">#1A1A2E</color>
@@ -27,6 +34,20 @@
     <!-- Status -->
     <color name="green">#00897B</color>
     <color name="pulse_color">#CE93D8</color>
+    <color name="error_surface">#FFD2D2</color>
+    <color name="warning_surface">#FFF3CD</color>
+    <color name="setup_surface">#FFF6C9</color>
+    <color name="error_text">#C62828</color>
+    <color name="error_action">#C62828</color>
+    <color name="error_soft">#FFCDD2</color>
+    <color name="warning_text">#8A4F00</color>
+    <color name="missed_text">#E65100</color>
+    <color name="dismissed_text">#616161</color>
+    <color name="handled_other_text">#5E35B1</color>
+    <color name="status_attended_surface">#DDF4F0</color>
+    <color name="status_other_surface">#EDE7F6</color>
+    <color name="status_dismissed_surface">#ECEFF1</color>
+    <color name="status_missed_surface">#FFF0E3</color>
 
     <!-- Alert screen -->
     <color name="alert_background">#2F006D</color>

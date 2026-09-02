@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) Toast.makeText(this,
-                "Notifications are disabled. Calls will not appear.", Toast.LENGTH_LONG).show()
+                "Notifications are turned off. Turn them on so you do not miss calls.", Toast.LENGTH_LONG).show()
         }
 
     // Views
@@ -193,7 +193,7 @@ class MainActivity : AppCompatActivity() {
         val sessionExpired = Session.isExpired(this, DeviceSettings.sessionTimeoutMs(this))
         if (sessionExpired) {
             Session.clear(this)
-            Toast.makeText(this, "This device session expired. Sign in again.",
+            Toast.makeText(this, "Your selected sign-in time has ended. Sign in again to continue receiving calls.",
                 Toast.LENGTH_LONG).show()
         }
         val user = Session.username(this)
@@ -263,7 +263,7 @@ class MainActivity : AppCompatActivity() {
                         Session.setLogin(this, username, sessionToken)
                         routePostLogin(username)
                     } else {
-                        showLoginError("Invalid credentials")
+                        showLoginError("We couldn't sign you in. Check your AIMS username and password.")
                     }
                 }
             } catch (e: Exception) {
@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity() {
                     btnLogin.isEnabled       = true
                     btnLogin.text            = "Sign In"
                     progressLogin.visibility = View.GONE
-                    showLoginError(e.message ?: "Could not connect to server")
+                    showLoginError("Employee Call could not connect. Check your internet connection and try again.")
                 }
             }
         }.start()
@@ -372,9 +372,9 @@ class MainActivity : AppCompatActivity() {
                 relayHealthFailures += 1
                 if (relayHealthFailures >= 3) runOnUiThread {
                     layoutAuthBanner.visibility = View.VISIBLE
-                    tvAuthBannerTitle.text = "Relay unavailable"
+                    tvAuthBannerTitle.text = "Employee Call is offline"
                     tvAuthBannerMessage.text =
-                        "Can't reach the relay. Check this device's connection or the VM service."
+                        "Check this device's internet connection. If this continues, ask an administrator to check Employee Call Operation."
                     btnAuthBannerSignIn.visibility = View.GONE
                 }
                 return@Thread
@@ -382,11 +382,11 @@ class MainActivity : AppCompatActivity() {
             relayHealthFailures = 0
             runOnUiThread {
                 layoutAuthBanner.visibility = if (status.first) View.VISIBLE else View.GONE
-                tvAuthBannerTitle.text = if (status.second) "Relay needs attention" else "Server signed out"
+                tvAuthBannerTitle.text = if (status.second) "Service needs attention" else "Sign in needed"
                 tvAuthBannerMessage.text = if (status.second) {
-                    "Relay authentication needs attention. Check Employee Call Operation."
+                    "Ask an administrator to check Employee Call Operation."
                 } else {
-                    "Alerts can't be delivered right now. Sign in again to restore."
+                    "Sign in again to continue receiving new calls."
                 }
                 btnAuthBannerSignIn.visibility = if (status.second) View.GONE else View.VISIBLE
             }
@@ -401,8 +401,8 @@ class MainActivity : AppCompatActivity() {
         layoutDeliveryBanner.visibility =
             if (notificationsEnabled && fullScreenAllowed) View.GONE else View.VISIBLE
         tvDeliveryBannerMessage.text = when {
-            !notificationsEnabled -> "Notifications are disabled. Calls may not appear."
-            !fullScreenAllowed -> "Full-screen alerts are disabled. Calls may only appear in the notification shade."
+            !notificationsEnabled -> "Notifications are turned off. Turn them on so you do not miss calls."
+            !fullScreenAllowed -> "Pop-up calls are turned off. Calls will still appear as notifications."
             else -> ""
         }
     }
@@ -499,7 +499,8 @@ class MainActivity : AppCompatActivity() {
         if (::tvActiveCountStatus.isInitialized) {
             if (count > 0) {
                 tvActiveCountStatus.text      = "● $count active call${if (count > 1) "s" else ""}"
-                tvActiveCountStatus.setTextColor(0xFFC62828.toInt())
+                tvActiveCountStatus.setTextColor(
+                    ContextCompat.getColor(this, R.color.error_text))
             } else {
                 tvActiveCountStatus.text      = "No active calls"
                 tvActiveCountStatus.setTextColor(

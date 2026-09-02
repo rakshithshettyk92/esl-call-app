@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 class ActiveCallsAdapter(
@@ -46,14 +47,14 @@ class ActiveCallsAdapter(
         holder.tvMessage.text = alert.message
         holder.tvDetail.text = listOfNotNull(
             alert.companyCode.takeIf { it.isNotBlank() }?.let { "Company $it" },
-            alert.labelCode.takeIf { it.isNotBlank() }?.let { "Label $it" },
+            alert.labelCode.takeIf { it.isNotBlank() }?.let { "Button $it" },
         ).joinToString("  •  ")
 
         bindCountdown(holder, alert)
 
         holder.btnOnMyWay.isEnabled = !loading
         holder.btnDismiss.isEnabled = !loading
-        holder.btnOnMyWay.text      = if (loading) "Confirming..." else "I'm on my way"
+        holder.btnOnMyWay.text      = if (loading) "Assigning..." else "I'm on my way"
 
         holder.btnOnMyWay.setOnClickListener {
             if (!loading) {
@@ -115,15 +116,18 @@ class ActiveCallsAdapter(
         val remaining = timeoutMs - (System.currentTimeMillis() - alert.receivedAt)
         if (remaining <= 0) {
             holder.tvCountdown.text = "Expired"
-            holder.tvCountdown.setTextColor(0xFFC62828.toInt())
+            holder.tvCountdown.setTextColor(
+                ContextCompat.getColor(holder.itemView.context, R.color.error_text))
         } else {
             val secs = (remaining / 1_000).toInt()
-            holder.tvCountdown.text = "$secs sec left"
-            holder.tvCountdown.setTextColor(when {
-                secs <= 10 -> 0xFFC62828.toInt()   // red
-                secs <= 20 -> 0xFFE65100.toInt()   // deep orange
-                else       -> 0xFF757575.toInt()   // grey
-            })
+            holder.tvCountdown.text = "$secs seconds left"
+            val color = when {
+                secs <= 10 -> R.color.error_text
+                secs <= 20 -> R.color.missed_text
+                else       -> R.color.text_secondary
+            }
+            holder.tvCountdown.setTextColor(
+                ContextCompat.getColor(holder.itemView.context, color))
         }
     }
 }

@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@color/primary"
+        android:background="@color/brand_primary"
         android:paddingStart="20dp"
         android:paddingEnd="24dp"
         android:paddingTop="16dp"
@@ -55,7 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
-                android:text="Staff Alert &amp; Response System"
+                android:text="Store Assistance Alerts"
                 android:textSize="11sp"
                 android:textColor="#CEB8E8" />
 
@@ -102,7 +102,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
-                    android:text="Use your own AIMS username and password. Your password is used only to sign in and is not stored on this device or the relay."
+                    android:text="Use your own AIMS username and password. Employee Call does not save your password."
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -174,7 +174,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:text=""
-                    android:textColor="#D32F2F"
+                    android:textColor="@color/error_text"
                     android:textSize="13sp"
                     android:visibility="gone" />
 
@@ -189,7 +189,8 @@
                         android:layout_height="match_parent"
                         android:text="Sign In"
                         android:textSize="15sp"
-                        android:backgroundTint="@color/primary" />
+                        android:backgroundTint="@color/action_primary"
+                        android:textColor="@color/white" />
 
                     <com.google.android.material.progressindicator.CircularProgressIndicator
                         android:id="@+id/progressLogin"
@@ -308,7 +309,7 @@
                                     android:layout_marginTop="2dp"
                                     android:text=""
                                     android:textSize="12sp"
-                                    android:textColor="@color/primary" />
+                                    android:textColor="@color/link_primary" />
 
                                 <TextView
                                     android:id="@+id/tvActiveCountStatus"
@@ -332,7 +333,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#FFD2D2"
+                        android:background="@color/error_surface"
                         android:padding="14dp"
                         android:layout_marginTop="12dp"
                         android:layout_marginBottom="2dp"
@@ -349,16 +350,16 @@
                                 android:id="@+id/tvAuthBannerTitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Server signed out"
+                                android:text="Sign in needed"
                                 android:textStyle="bold"
                                 android:textSize="13sp"
-                                android:textColor="#C62828" />
+                                android:textColor="@color/error_text" />
 
                             <TextView
                                 android:id="@+id/tvAuthBannerMessage"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Alerts can't be delivered right now. Sign in again to restore."
+                                android:text="Sign in again to continue receiving new calls."
                                 android:textSize="12sp"
                                 android:textColor="@color/text_primary"
                                 android:layout_marginTop="2dp" />
@@ -374,7 +375,7 @@
                             android:paddingEnd="14dp"
                             android:text="Sign In"
                             android:textSize="12sp"
-                            android:backgroundTint="#C62828"
+                            android:backgroundTint="@color/error_action"
                             android:textColor="@color/white" />
 
                     </LinearLayout>
@@ -384,7 +385,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:background="#FFF3CD"
+                        android:background="@color/warning_surface"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:padding="14dp"
@@ -404,7 +405,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="48dp"
                             android:text="Fix settings"
-                            android:textSize="12sp" />
+                            android:textSize="12sp"
+                            android:backgroundTint="@color/action_primary"
+                            android:textColor="@color/white" />
 
                     </LinearLayout>
 
@@ -415,7 +418,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#FFF6C9"
+                        android:background="@color/setup_surface"
                         android:padding="14dp"
                         android:layout_marginTop="14dp"
                         android:layout_marginBottom="2dp"
@@ -431,7 +434,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Setup required"
+                                android:text="Store setup needed"
                                 android:textStyle="bold"
                                 android:textSize="13sp"
                                 android:textColor="@color/text_primary" />
@@ -439,7 +442,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Configure this store's call rules so eligible button presses can reach associates."
+                                android:text="Choose how this store's AIMS information should appear in employee calls."
                                 android:textSize="12sp"
                                 android:textColor="@color/text_primary"
                                 android:layout_marginTop="2dp" />
@@ -453,9 +456,9 @@
                             android:minHeight="36dp"
                             android:paddingStart="14dp"
                             android:paddingEnd="14dp"
-                            android:text="Configure"
+                            android:text="Set up"
                             android:textSize="12sp"
-                            android:backgroundTint="@color/primary"
+                            android:backgroundTint="@color/action_primary"
                             android:textColor="@color/white" />
 
                     </LinearLayout>
@@ -536,7 +539,7 @@
                                 android:layout_height="20dp"
                                 android:layout_gravity="center"
                                 android:background="@drawable/shape_circle_pulse"
-                                android:backgroundTint="#FFCDD2"
+                                android:backgroundTint="@color/error_soft"
                                 android:alpha="0.7" />
 
                             <View
@@ -544,7 +547,7 @@
                                 android:layout_height="10dp"
                                 android:layout_gravity="center"
                                 android:background="@drawable/shape_circle_green"
-                                android:backgroundTint="#C62828" />
+                                android:backgroundTint="@color/error_action" />
 
                         </FrameLayout>
 
@@ -561,7 +564,7 @@
                                 android:text="Active Calls"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="#C62828" />
+                                android:textColor="@color/error_text" />
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -579,7 +582,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:text="View and respond"
-                        android:backgroundTint="#C62828" />
+                        android:backgroundTint="@color/error_action"
+                        android:textColor="@color/white" />
 
                 </LinearLayout>
 
@@ -598,7 +602,8 @@
                     android:layout_height="52dp"
                     android:layout_marginBottom="10dp"
                     android:text="Preview alert"
-                    android:backgroundTint="@color/primary" />
+                    android:backgroundTint="@color/action_primary"
+                    android:textColor="@color/white" />
 
                 <LinearLayout
                     android:id="@+id/layoutStoreActions"

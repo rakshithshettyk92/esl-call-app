@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Solum dark mode palette -->
-    <color name="primary">#2F006D</color>
+    <color name="primary">#C4B5FD</color>
+    <color name="brand_primary">#2F006D</color>
+    <color name="action_primary">#6D28D9</color>
+    <color name="link_primary">#C4B5FD</color>
+    <color name="on_primary">#1A003D</color>
     <color name="primary_light">#5E3588</color>
     <color name="primary_dark">#1A003D</color>
 
@@ -11,6 +15,9 @@
     <color name="divider">#243050</color>
     <color name="soft_surface">#241934</color>
     <color name="soft_surface_emphasis">#302044</color>
+    <color name="card_stroke">#3B4868</color>
+    <color name="info_surface">#241934</color>
+    <color name="info_stroke">#5E4579</color>
 
     <!-- Text -->
     <color name="text_primary">#E8EDF5</color>
@@ -19,4 +26,18 @@
     <!-- Status -->
     <color name="green">#4DB6AC</color>
     <color name="pulse_color">#80CBC4</color>
+    <color name="error_surface">#3B171B</color>
+    <color name="warning_surface">#3A2F12</color>
+    <color name="setup_surface">#332A10</color>
+    <color name="error_text">#FCA5A5</color>
+    <color name="error_action">#B91C1C</color>
+    <color name="error_soft">#4A1D24</color>
+    <color name="warning_text">#FCD34D</color>
+    <color name="missed_text">#FDBA74</color>
+    <color name="dismissed_text">#CBD5E1</color>
+    <color name="handled_other_text">#C4B5FD</color>
+    <color name="status_attended_surface">#123B37</color>
+    <color name="status_other_surface">#302044</color>
+    <color name="status_dismissed_surface">#253044</color>
+    <color name="status_missed_surface">#422A1B</color>
 </resources>
