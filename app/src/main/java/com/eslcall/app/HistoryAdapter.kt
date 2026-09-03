@@ -55,8 +55,16 @@ class HistoryAdapter(private var items: List<AlertHistoryItem>) :
             AlertStatus.DISMISSED -> bindStatus(
                 holder, "\u00D7", "Not taken on this device", R.color.dismissed_text, R.drawable.shape_status_dismissed)
             AlertStatus.MISSED -> bindStatus(
-                holder, "!", "Missed because no one responded in time", R.color.missed_text, R.drawable.shape_status_missed)
+                holder, "!", missedLabel(item.missedReason), R.color.missed_text, R.drawable.shape_status_missed)
         }
+    }
+
+    private fun missedLabel(reason: String?) = when (reason) {
+        "no_associates_signed_in" -> "Missed because no associates were signed in"
+        "no_registered_devices" -> "Missed because no devices were available"
+        "notification_delivery_failed" -> "Missed because the alert could not be delivered"
+        "processing_failed" -> "Missed because the call could not be prepared"
+        else -> "Missed because no one responded in time"
     }
 
     private fun bindStatus(holder: ViewHolder, icon: String, label: String, color: Int, background: Int) {

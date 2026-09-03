@@ -13,6 +13,7 @@ object Constants {
     const val PATH_DEVICE_UNREGISTER   = "/devices/unregister"
     const val PATH_ESL_ACKNOWLEDGE     = "/esl/acknowledge"
     const val PATH_ESL_STATUS          = "/esl/status"
+    const val PATH_CALL_HISTORY        = "/calls/history"
     const val PATH_ADMIN_STORES        = "/admin/stores"
     const val PATH_ADMIN_FORMAT        = "/admin/articles/upload/format"
     const val PATH_ADMIN_FIELD_MAPPING = "/admin/field-mapping"

@@ -12,6 +12,8 @@ data class AlertHistoryItem(
     val timestamp:   Long,
     val status:      AlertStatus = AlertStatus.ACKNOWLEDGED,
     val handledBy:   String? = null,
+    val callId:      String? = null,
+    val missedReason: String? = null,
 ) {
     fun formattedTimeOnly(): String =
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))

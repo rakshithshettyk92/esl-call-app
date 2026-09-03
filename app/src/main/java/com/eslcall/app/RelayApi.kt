@@ -182,6 +182,32 @@ object RelayApi {
         ))
     }
 
+    /** Returns the final outcomes for this associate's selected store. */
+    fun fetchCallHistory(company: String, store: String): List<AlertHistoryItem> {
+        val json = get(Constants.PATH_CALL_HISTORY, mapOf(
+            "company" to company,
+            "store" to store,
+            "limit" to "100",
+        ))
+        val array = json.optJSONArray("calls") ?: return emptyList()
+        return (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val status = runCatching {
+                AlertStatus.valueOf(item.optString("status"))
+            }.getOrNull() ?: return@mapNotNull null
+            AlertHistoryItem(
+                message = item.optString("message", "Customer help requested"),
+                companyCode = item.optString("companyCode", company),
+                labelCode = item.optString("labelCode"),
+                timestamp = item.optLong("timestamp"),
+                status = status,
+                handledBy = item.optString("handledBy").takeIf { it.isNotBlank() },
+                callId = item.optString("id").takeIf { it.isNotBlank() },
+                missedReason = item.optString("missedReason").takeIf { it.isNotBlank() },
+            )
+        }
+    }
+
     private fun buildUrl(path: String, query: Map<String, String>): String {
         val base = Constants.RELAY_URL + path
         if (query.isEmpty()) return base

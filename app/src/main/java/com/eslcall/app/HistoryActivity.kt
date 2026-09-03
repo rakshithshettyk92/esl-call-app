@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -14,7 +15,8 @@ class HistoryActivity : AppCompatActivity() {
 
     private enum class Filter { ALL, ATTENDED, MISSED, DISMISSED, HANDLED_ELSEWHERE }
 
-    private lateinit var allItems: List<AlertHistoryItem>
+    private var allItems: List<AlertHistoryItem> = emptyList()
+    private var selectedFilter = Filter.ALL
     private lateinit var adapter: HistoryAdapter
     private lateinit var layoutEmpty: LinearLayout
     private lateinit var recycler: RecyclerView
@@ -49,9 +51,11 @@ class HistoryActivity : AppCompatActivity() {
             findViewById<Chip>(id).setOnClickListener { showFilter(filter) }
         }
         showFilter(Filter.ALL)
+        refreshStoreHistory()
     }
 
     private fun showFilter(filter: Filter) {
+        selectedFilter = filter
         val filtered = when (filter) {
             Filter.ALL -> allItems
             Filter.ATTENDED -> allItems.filter { it.status == AlertStatus.ACKNOWLEDGED }
@@ -61,7 +65,7 @@ class HistoryActivity : AppCompatActivity() {
         }
         adapter.submitItems(filtered)
         tvSummary.text = when (filter) {
-            Filter.ALL -> "${allItems.size} call${if (allItems.size == 1) "" else "s"} on this device"
+            Filter.ALL -> "${allItems.size} call${if (allItems.size == 1) "" else "s"} for this store"
             else -> "${filtered.size} of ${allItems.size} calls"
         }
         tvEmptyTitle.text = when (filter) {
@@ -78,5 +82,32 @@ class HistoryActivity : AppCompatActivity() {
         }
         layoutEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         recycler.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun refreshStoreHistory() {
+        val company = Session.companyCode(this).orEmpty()
+        val store = Session.storeCode(this).orEmpty()
+        if (company.isBlank() || store.isBlank()) return
+        val deviceItems = allItems
+        Thread {
+            runCatching { RelayApi.fetchCallHistory(company, store) }
+                .onSuccess { storeItems ->
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        allItems = HistoryMerger.merge(storeItems, deviceItems)
+                        showFilter(selectedFilter)
+                    }
+                }
+                .onFailure {
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        Toast.makeText(
+                            this,
+                            "Store history could not be refreshed. Showing calls saved on this device.",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+        }.start()
     }
 }
